@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditCookieMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditCookie">
+		<id column="id" property="id" />
+		<result column="email_id" property="emailId" />
+		<result column="key" property="key" />
+		<result column="value" property="value" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, emailId, key, value
+    </sql>
+	
+	
+   <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_cookie (email_id,`key`,`value`)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.emailId},#{item.key},#{item.value})         
+        </foreach>
+    </insert>
+    <delete id="deleteByEmail" parameterType="Long">  
+        DELETE FROM credit_cookie WHERE email_id = #{emailId}  
+	</delete>  
+    
+</mapper>

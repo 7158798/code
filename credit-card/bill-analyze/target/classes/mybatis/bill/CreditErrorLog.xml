@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditErrorLogMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditErrorLog">
+		<id column="id" property="id" />
+		<result column="email" property="email" />
+		<result column="bill_id" property="billId" />
+		<result column="error_type" property="errorType" />
+		<result column="error_msg" property="errorMsg" />
+        <result column="bank_id" property="bankId" />
+        <result column="cardtype_id" property="cardtypeId" />
+		<result column="status" property="status" />
+		<result column="update_date" property="updateDate" />
+		<result column="create_date" property="createDate" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, email, bill_id AS billId, error_type AS errorType, error_msg AS errorMsg, 
+        bank_id as bankId,cardtype_id as cardtypeId,
+        status, update_date AS updateDate, create_date AS createDate
+    </sql>
+
+</mapper>

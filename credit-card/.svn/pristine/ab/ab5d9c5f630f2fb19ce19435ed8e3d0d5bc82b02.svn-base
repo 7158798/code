@@ -1,0 +1,36 @@
+package com.pay.aile.bill.utils;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pay.aile.bill.entity.CreditEmail;
+import com.pay.aile.bill.service.CreditErrorLogService;
+
+@Component
+public class ErrorLogUtil {
+
+    @Resource
+    private CreditErrorLogService creditErrorLogService;
+
+    @Transactional
+    public void downloadErrorLog(CreditEmail creditEmail, Exception e) {
+        try {
+            creditErrorLogService.saveDownloadErrorLog(creditEmail.getEmail(), Long.valueOf(creditEmail.getUserId()),
+                    e.getMessage());
+        } catch (Exception ee) {
+
+        }
+    }
+
+    @Transactional
+    public void loginErrorLog(CreditEmail creditEmail, Exception e) {
+        try {
+            creditErrorLogService.saveLoginErrorLog(creditEmail.getEmail(), Long.valueOf(creditEmail.getUserId()),
+                    e.getMessage());
+        } catch (Exception ee) {
+
+        }
+    }
+}

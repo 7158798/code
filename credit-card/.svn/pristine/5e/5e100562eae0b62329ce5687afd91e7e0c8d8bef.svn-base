@@ -1,0 +1,134 @@
+package com.pay.card.model;
+
+import java.io.Serializable;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicUpdate;
+
+@Table(name = "credit_set")
+@Entity
+@DynamicInsert
+@DynamicUpdate
+public class CreditSet extends BaseEntity implements Serializable {
+
+    /**
+     * @Fields field:field:{todo}(用一句话描述这个变量表示什么)
+     */
+
+    private static final long serialVersionUID = -2109355977126165374L;
+
+    /**
+     * 用户
+     */
+    private CreditUserInfo userInfo;
+
+    /**
+     * 是否还款提醒
+     */
+    @Column(nullable = false, columnDefinition = "TINYINT", length = 1)
+    private boolean isRepaymentReminder = true;
+
+    /**
+     * 提前提醒的天数
+     */
+
+    private Integer advanceDay = 5;
+
+    /**
+     * 提醒时间
+     */
+
+    private Integer times = 10;
+
+    /**
+     * 账单日提醒
+     */
+    @Column(nullable = false, columnDefinition = "TINYINT", length = 1)
+    private boolean isBilldayReminder = true;
+
+    /**
+     * 账单逾期提醒
+     */
+    @Column(nullable = false, columnDefinition = "TINYINT", length = 1)
+    private boolean isOverdueReminder = true;
+
+    /**
+     * 出账单提醒
+     */
+    @Column(nullable = false, columnDefinition = "TINYINT", length = 1)
+    private boolean isOutBillReminder = true;
+
+    public Integer getAdvanceDay() {
+        return advanceDay;
+    }
+
+    public Integer getTimes() {
+        return times;
+    }
+
+    /**
+     * @return userInfo
+     */
+    @OneToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    public CreditUserInfo getUserInfo() {
+        return userInfo;
+    }
+
+    public boolean isBilldayReminder() {
+        return isBilldayReminder;
+    }
+
+    public boolean isOutBillReminder() {
+        return isOutBillReminder;
+    }
+
+    public boolean isOverdueReminder() {
+        return isOverdueReminder;
+    }
+
+    public boolean isRepaymentReminder() {
+        return isRepaymentReminder;
+    }
+
+    public void setAdvanceDay(Integer advanceDay) {
+        this.advanceDay = advanceDay;
+    }
+
+    public void setBilldayReminder(boolean isBilldayReminder) {
+        this.isBilldayReminder = isBilldayReminder;
+    }
+
+    public void setOutBillReminder(boolean isOutBillReminder) {
+        this.isOutBillReminder = isOutBillReminder;
+    }
+
+    public void setOverdueReminder(boolean isOverdueReminder) {
+        this.isOverdueReminder = isOverdueReminder;
+    }
+
+    public void setRepaymentReminder(boolean isRepaymentReminder) {
+        this.isRepaymentReminder = isRepaymentReminder;
+    }
+
+    public void setTimes(Integer times) {
+        this.times = times;
+    }
+
+    /**
+     * @param userInfo
+     *            the userInfo to set
+     */
+
+    public void setUserInfo(CreditUserInfo userInfo) {
+        this.userInfo = userInfo;
+    }
+}

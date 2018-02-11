@@ -1,0 +1,97 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import javax.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditBillDao;
+import com.pay.card.dao.CreditCardDao;
+import com.pay.card.dao.CreditRepaymentDao;
+import com.pay.card.dao.CreditUserInfoDao;
+import com.pay.card.enums.StatusEnum;
+import com.pay.card.model.CreditBill;
+import com.pay.card.model.CreditRepayment;
+import com.pay.card.model.CreditUserInfo;
+import com.pay.card.service.CreditRepaymentService;
+
+@Service
+public class CreditRepaymentServiceImpl implements CreditRepaymentService {
+
+    @Autowired
+    private CreditRepaymentDao creditRepaymentDao;
+
+    @Autowired
+    private CreditBillDao creditBillDao;
+
+    @Autowired
+    private CreditCardDao creditCardDao;
+
+    @Autowired
+    private CreditUserInfoDao creditUserInfoDao;
+
+    @Override
+    public CreditRepayment delete(CreditRepayment creditRepayment) {
+        CreditRepayment repayment = null;
+        if (creditRepayment.getId() != null) {
+            repayment = creditRepaymentDao.findOne(creditRepayment.getId());
+
+            repayment.setStatus(StatusEnum.DISENABLE.getStatus());
+
+            creditRepaymentDao.saveAndFlush(repayment);
+        }
+
+        return repayment;
+    }
+
+    @Override
+    public List<CreditRepayment> findRepaymentList(CreditRepayment creditRepayment) {
+        Sort sort = new Sort(Direction.ASC, "id");
+        return creditRepaymentDao.findAll(getSpecification(creditRepayment), sort);
+    }
+
+    @Override
+    @Transactional
+    public CreditRepayment saveOrUpdate(CreditRepayment creditRepayment) {
+        if (creditRepayment.getBill() != null && creditRepayment.getBill().getId() != null) {
+            CreditBill bill = creditBillDao.findOne(creditRepayment.getBill().getId());
+            CreditUserInfo userInfo = creditUserInfoDao.findOne(creditRepayment.getUserInfo().getId());
+            creditRepayment.setBill(bill);
+            creditRepayment.setUserInfo(userInfo);
+            creditRepayment.setCreateDate(new Date());
+            creditRepayment.setStatus(StatusEnum.ENABLE.getStatus());
+            creditRepayment = creditRepaymentDao.saveAndFlush(creditRepayment);
+            creditCardDao.updateCardRePayMent(bill.getCard().getId(), userInfo.getId(), new Date(),
+                    creditRepayment.getAmount());
+        }
+
+        return creditRepayment;
+    }
+
+    private Specification<CreditRepayment> getSpecification(CreditRepayment creditRepayment) {
+        return new Specification<CreditRepayment>() {
+            @Override
+            public Predicate toPredicate(Root<CreditRepayment> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+
+                list.add(
+                        cb.equal(root.get("userInfo").get("id").as(Long.class), creditRepayment.getUserInfo().getId()));
+                list.add(cb.equal(root.get("bill").get("id").as(Long.class), creditRepayment.getBill().getId()));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+        };
+
+    }
+}

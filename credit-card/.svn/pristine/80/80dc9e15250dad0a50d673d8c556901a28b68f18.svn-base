@@ -1,0 +1,174 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout" layout:decorator="layout">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>测试页面</title>
+  <link rel="stylesheet" href="../static/css/layui.css" th:href="@{../static/css/layui.css}"></link>
+</head>
+<body class="layui-layout-body">
+    <div class="container" style="padding: 15px;">
+    <div class="layui-form-item">
+      <label class="layui-form-label" style="margin:0 auto;float: none;">测试页面</label>
+    </div>
+    <div class="layui-tab" style="width:800px;margin:0 auto;">
+	  <ul class="layui-tab-title">
+	    <li class="layui-this">脚本</li>
+	    <li>命令</li>
+	  </ul>
+	  <div class="layui-tab-content">
+	    <div class="layui-tab-item layui-show"><!-- 1script -->
+	         <div class="layui-form-item">
+                <label class="layui-form-label">secretKey</label>
+                <div class="layui-input-block">
+                  <input type="text" id="scriptSecretKey" lay-verify="title" autocomplete="off" placeholder="secretKey" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">脚本内容</label>
+                <div class="layui-input-block">
+                  <textarea placeholder="请输入内容" class="layui-textarea" id="scriptScript"></textarea>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">KEYS</label>
+                <div class="layui-input-block">
+                  <input type="text" id="scriptKeys" lay-verify="title" autocomplete="off" placeholder="keys" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">ARGV</label>
+                <div class="layui-input-block">
+                  <input type="text" id="scriptArgs" lay-verify="title" autocomplete="off" placeholder="args" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label"></label>
+                <div class="layui-input-block">
+                    <fieldset class="layui-elem-field site-demo-button" style="margin-top: 0px;">
+                      <legend style="font-size: 14px;">结果</legend>
+                      <div id="scriptResult" style="min-height: 60px;">
+                      </div>
+                    </fieldset>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                 <div class="layui-input-block">
+                  <button class="layui-btn" id="scriptSubmit">立即提交</button>
+                  <button type="reset" class="layui-btn layui-btn-primary" id="scriptReset">重置</button>
+                </div>
+             </div>
+	    </div><!-- 1 script end -->
+	    <div class="layui-tab-item"><!-- 2commands -->
+	       <div class="layui-form-item">
+                <label class="layui-form-label">secretKey</label>
+                <div class="layui-input-block">
+                  <input type="text" id="commandsSecretKey" lay-verify="title" autocomplete="off" placeholder="" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">命令内容</label>
+                <div class="layui-input-block">
+                  <textarea placeholder="请输入内容" class="layui-textarea" id="commandsCommands"></textarea>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label"></label>
+                <div class="layui-input-block">
+                    <fieldset class="layui-elem-field site-demo-button" style="margin-top: 0px;">
+	                  <legend style="font-size: 14px;">结果</legend>
+	                  <div id="commandsResult" style="min-height: 60px;">
+	                  </div>
+	                </fieldset>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                 <div class="layui-input-block">
+                  <button class="layui-btn" id="commandsSubmit">立即提交</button>
+                  <button type="reset" class="layui-btn layui-btn-primary" id="commandsReset">重置</button>
+                </div>
+             </div>
+	    
+	    </div><!-- 2 commands end -->
+	  </div>
+	</div>
+    </div>
+   
+</body>
+<script src="../static/layui.all.js" charset="utf-8"></script>
+<script>
+layui.use('element', function(){
+  var $ = layui.jquery
+  ,element = layui.element; //Tab的切换功能，切换事件监听等，需要依赖element模块
+  var layer = layui.layer;
+  
+//scriptSubmit
+  $("#scriptSubmit").click(function(){
+      $("#scriptResult").text("");
+      var scriptSecretKey = $("#scriptSecretKey").val();
+      var scriptScript = $("#scriptScript").val();
+      var scriptKeys = $("#scriptKeys").val();
+      var scriptArgs = $("#scriptArgs").val();
+      if(scriptSecretKey == ''||scriptScript==''){
+    	  layer.msg('提交空串,你想干啥!');
+          return false;
+      }
+      $.ajax({
+          type : 'POST',
+          url : '../test/s',
+          data : {
+              secretKey:scriptSecretKey,
+              script:scriptScript,
+              keys:scriptKeys,
+              args:scriptArgs
+          },
+          dataType : "text",
+          success : function(data){
+              $("#scriptResult").text(data);
+          },
+          error:function(result){
+              layer.msg('网络请求超时,自己搞定!',{offset: '300px'});
+          }
+      });
+  });
+  //scriptReset
+  $("#scriptReset").click(function(){
+      $("#scriptResult").text("");
+      $("#scriptScript").val("");
+      $("#scriptKeys").val("");
+      $("#scriptArgs").val("");
+  });
+  //commandsSubmit
+  $("#commandsSubmit").click(function(){
+      $("#commandsResult").text("");
+      var commandsSecretKey = $("#commandsSecretKey").val();
+      var commandsCommands = $("#commandsCommands").val();
+      if(commandsSecretKey == ''||commandsCommands==''){
+          layer.msg('提交空串,你想干啥!');
+          return false;
+      }
+      $.ajax({
+          type : 'POST',
+          url : '../test/c',
+          data : {
+              secretKey:commandsSecretKey,
+              commands:commandsCommands
+          },
+          dataType : "text",
+          success : function(data){
+              $("#commandsResult").text(data);
+          },
+          error:function(result){
+              layer.msg('网络请求超时,自己搞定!',{offset: '300px'});
+          }
+      });
+  });
+  //commandsReset
+  $("#commandsReset").click(function(){
+      $("#commandsResult").text("");
+      $("#commandsCommands").val("");
+  });
+});
+
+</script>
+</html>

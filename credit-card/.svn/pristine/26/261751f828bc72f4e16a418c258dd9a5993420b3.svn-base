@@ -1,0 +1,63 @@
+package com.pay.aile.bill.utils;
+
+import com.pay.aile.bill.contant.Constant;
+import com.pay.aile.bill.entity.CreditEmail;
+import com.pay.aile.bill.enums.MailLoginStatus;
+
+/**
+ *
+ * @Description: 邮件下载解析过程状态处理工具类
+ * @see: MailProcessCacheUtil 此处填写需要参考的类
+ * @version 2017年12月13日 下午2:54:45
+ * @author chao.wang
+ */
+public class MailProcessStatusCacheUtil {
+
+    public static final String EMAIL_USERID_SEPARATOR = "_";
+
+    /**
+     *
+     * @Description 任务执行之初,初始化邮件下载解析执行状态
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    public static void initMailProcessStatus(CreditEmail creditEmail) {
+        JedisClusterUtils.saveString(Constant.REDIS_ANALYSIS_STATUS + creditEmail.getEmail(), "0");
+        JedisClusterUtils.saveString(Constant.REDIS_ANALYZED_STATUS + creditEmail.getEmail(), "0");
+        loginInit(creditEmail);
+    }
+
+    public static void loginFail(CreditEmail creditEmail) {
+        JedisClusterUtils.hashSet(Constant.REDIS_LOGGIN_STATUS,
+                creditEmail.getEmail() + EMAIL_USERID_SEPARATOR + creditEmail.getUserId(),
+                MailLoginStatus.FAIL.getValue());
+    }
+
+    public static void loginInit(CreditEmail creditEmail) {
+        JedisClusterUtils.hashSet(Constant.REDIS_LOGGIN_STATUS,
+                creditEmail.getEmail() + EMAIL_USERID_SEPARATOR + creditEmail.getUserId(),
+                MailLoginStatus.INIT.getValue());
+    }
+
+    public static void loginSuccess(CreditEmail creditEmail) {
+        JedisClusterUtils.hashSet(Constant.REDIS_LOGGIN_STATUS,
+                creditEmail.getEmail() + EMAIL_USERID_SEPARATOR + creditEmail.getUserId(),
+                MailLoginStatus.SUCCESS.getValue());
+    }
+
+    public static void setAnalyzedBillNum(CreditEmail creditEmail, int num) {
+        JedisClusterUtils.saveString(Constant.REDIS_ANALYZED_STATUS + creditEmail.getEmail(), String.valueOf(num));
+    }
+
+    public static void setAnalyzedCards(CreditEmail creditEmail, String cardjson) {
+        JedisClusterUtils.setSave(Constant.REDIS_CARDS + creditEmail.getEmail(), cardjson);
+    }
+
+    public static void setDownloadNothing(CreditEmail creditEmail) {
+        setDownloadNum(creditEmail, -1);
+    }
+
+    public static void setDownloadNum(CreditEmail creditEmail, int num) {
+        JedisClusterUtils.saveString(Constant.REDIS_ANALYSIS_STATUS + creditEmail.getEmail(), String.valueOf(num));
+    }
+}

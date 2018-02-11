@@ -1,0 +1,58 @@
+package com.pay.aile.bill.analyze.banktemplate.psbc;
+
+import org.springframework.stereotype.Service;
+
+import com.pay.aile.bill.analyze.banktemplate.BaseBankSeparateShareDetailTemplate;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.utils.DateUtil;
+
+/**
+ *
+ * @author zhibin.cui
+ * @description 邮储银行信用卡账单内容解析模板
+ */
+@Service
+public class PSBCTemplate extends BaseBankSeparateShareDetailTemplate implements AbstractPSBCTemplate {
+
+    @Override
+    public void initRules() {
+        super.initRules();
+        if (rules == null) {
+            rules = new CreditTemplate();
+            rules.setCardtypeId(14L);
+            rules.setYearMonth("\\(\\d{4}年\\d{2}月");
+            rules.setCardholder("尊敬的[\\u4e00-\\u9fa5]+");
+            rules.setBillDay("账单日 \\d{2}");
+            rules.setCredits("信用额度 \\d+\\.?\\d*");
+            rules.setCash("预借现金额度 \\d+\\.?\\d*");
+            rules.setDueDate("到期还款日 \\d{4}年\\d{2}月\\d{2}日");
+            rules.setIntegral("本期积分余额 \\d+");
+            rules.setCurrentAmount("本期应还金额 \\d+\\.?\\d*");
+            rules.setMinimum(" 最低还款额 \\d+\\.?\\d*");
+            rules.setDetails("\\d{4}/\\d{2}/\\d{2} \\d{4}/\\d{2}/\\d{2} \\S+ -?\\d+\\.?\\d* \\d{4}");
+            rules.setCardNumbers("4");
+        }
+    }
+
+    @Override
+    protected void setCardType() {
+        cardType = CardTypeEnum.PSBC_DEFAULT;
+    }
+
+    @Override
+    protected CreditBillDetail setCreditBillDetail(String detail) {
+        CreditBillDetail cbd = new CreditBillDetail();
+        String[] sa = detail.split(" ");
+        cbd.setTransactionDate(DateUtil.parseDate(sa[0]));
+        cbd.setBillingDate(DateUtil.parseDate(sa[1]));
+        cbd.setTransactionAmount(sa[sa.length - 2].replaceAll("\\n", ""));
+        String desc = "";
+        for (int i = 2; i < sa.length - 2; i++) {
+            desc = desc + sa[i];
+        }
+        cbd.setTransactionDescription(desc);
+        return cbd;
+    }
+}

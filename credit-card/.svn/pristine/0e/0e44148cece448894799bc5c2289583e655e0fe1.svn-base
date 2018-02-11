@@ -1,0 +1,63 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditUserInfoDao;
+import com.pay.card.enums.ChannelEnum;
+import com.pay.card.model.CreditUserInfo;
+import com.pay.card.service.CreditUserInfoService;
+
+@Service
+public class CreditUserInfoServiceImpl implements CreditUserInfoService {
+
+    @Autowired
+    private CreditUserInfoDao creditUserInfoDao;
+
+    @Override
+    public CreditUserInfo findCreditUserInfo(CreditUserInfo creditUserInof) {
+
+        return creditUserInfoDao.findOne(getSpecification(creditUserInof));
+    }
+
+    @Override
+    public List<CreditUserInfo> findCreditUserInfoAll() {
+
+        return creditUserInfoDao.findAll();
+    }
+
+    private Specification<CreditUserInfo> getSpecification(CreditUserInfo creditUserInof) {
+        return new Specification<CreditUserInfo>() {
+            @Override
+            public Predicate toPredicate(Root<CreditUserInfo> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                if (ChannelEnum.MPOS.getCode().equals(creditUserInof.getInterfaceCode())) {
+                    list.add(cb.equal(root.get("phoneNo").as(String.class), creditUserInof.getPhoneNo()));
+                }
+                if (ChannelEnum.POS.getCode().equals(creditUserInof.getInterfaceCode())) {
+                    list.add(cb.equal(root.get("customerNo").as(String.class), creditUserInof.getCustomerNo()));
+                }
+                list.add(cb.equal(root.get("interfaceCode").as(String.class), creditUserInof.getInterfaceCode()));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+        };
+
+    }
+
+    @Override
+    public Long saveCreditUserInfo(CreditUserInfo creditUserInfo) {
+        creditUserInfoDao.saveAndFlush(creditUserInfo);
+        return creditUserInfo.getId();
+    }
+
+}

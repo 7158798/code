@@ -1,0 +1,11 @@
+package com.pay.card.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import com.pay.card.model.CreditUserCardRelation;
+
+public interface CreditUserCardRelationDao extends JpaRepository<CreditUserCardRelation, Long>,
+                JpaSpecificationExecutor<CreditUserCardRelation> {
+
+}

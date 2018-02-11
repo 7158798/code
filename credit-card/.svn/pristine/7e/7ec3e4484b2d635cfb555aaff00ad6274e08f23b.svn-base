@@ -1,0 +1,45 @@
+package com.pay.aile.bill;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import com.pay.aile.bill.entity.CreditBillDetail;
+
+/**
+ *
+ * @author syq
+ *
+ */
+@SpringBootApplication
+public class BillAnalyzeApplication {
+
+    public static void main(String[] args) {
+        // SpringApplication.run(BillAnalyzeApplication.class, args);
+        List<CreditBillDetail> detailList = new ArrayList<CreditBillDetail>();
+        CreditBillDetail cbd1 = new CreditBillDetail();
+        CreditBillDetail cbd2 = new CreditBillDetail();
+        CreditBillDetail cbd3 = new CreditBillDetail();
+        CreditBillDetail cbd4 = new CreditBillDetail();
+        CreditBillDetail cbd5 = new CreditBillDetail();
+        cbd1.setCardNumbers("1234");
+        cbd2.setCardNumbers("1234");
+        cbd3.setCardNumbers("5678");
+        cbd4.setCardNumbers("5678");
+        cbd5.setCardNumbers("5678");
+        detailList.add(cbd1);
+        detailList.add(cbd2);
+        detailList.add(cbd3);
+        detailList.add(cbd4);
+        detailList.add(cbd5);
+        Map<String, Long> groupDetail = detailList.stream()
+                .collect(Collectors.groupingBy(CreditBillDetail::getCardNumbers, Collectors.counting()));
+        System.out.println(groupDetail);
+        System.out.println(groupDetail.entrySet().stream().max((o1, o2) -> {
+            return o1.getValue() > o2.getValue() ? 1 : -1;
+        }).get().getKey());
+    }
+}

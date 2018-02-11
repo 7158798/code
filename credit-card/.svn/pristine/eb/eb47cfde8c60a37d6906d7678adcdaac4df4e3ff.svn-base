@@ -1,0 +1,5 @@
+package com.pay.card.api;
+
+public class CreditRepaymentController {
+
+}

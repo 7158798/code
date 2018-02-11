@@ -1,0 +1,53 @@
+package com.pay.card.api;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+
+import java.util.concurrent.Callable;
+
+import org.apache.http.client.methods.HttpPost;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.async.WebAsyncTask;
+
+import springfox.documentation.annotations.ApiIgnore;
+
+import com.pay.card.interceptor.RepaymentResolverInterceptor;
+import com.pay.card.model.CreditRepayment;
+import com.pay.card.service.CreditRepaymentService;
+import com.pay.card.view.JsonResultView;
+
+@Api("信用卡卡片  API")
+@RestController
+@RequestMapping("/api/v1/repayment")
+public class CreditRepaymentController {
+    @Autowired
+    private CreditRepaymentService creditRepaymentService;
+
+    @ApiOperation(value = "保存信用卡账单还款", httpMethod = HttpPost.METHOD_NAME, notes = "保存信用卡账单还款,还款类型 0 标记还款,1 标记已还清 ,2 实际还款,3 账单还款")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "customerNo", dataType = "String", required = true, value = "商户编号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "phoneNo", dataType = "String", required = true, value = "商户手机号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "channel", dataType = "String", required = true, value = "渠道号", defaultValue = "1001"),
+            @ApiImplicitParam(paramType = "query", name = "billId", dataType = "Long", required = true, value = "账单id", defaultValue = "100"),
+            @ApiImplicitParam(paramType = "query", name = "amount", dataType = "Double", required = true, value = "还款金额", defaultValue = "100"),
+            @ApiImplicitParam(paramType = "query", name = "type", dataType = "Integer", required = true, value = " 0 标记还款,1 标记已还清 ,2 实际还款", defaultValue = "100"),
+            @ApiImplicitParam(paramType = "query", name = "cardId", dataType = "Long", required = true, value = "卡id", defaultValue = "100") })
+    @RequestMapping(value = "/saveCreditRepayment", method = RequestMethod.POST)
+    public
+            WebAsyncTask<JsonResultView<?>> saveCreditRepayment(@RepaymentResolverInterceptor @ApiIgnore CreditRepayment creditRepayment) {
+
+        Callable<JsonResultView<?>> callable = new Callable<JsonResultView<?>>() {
+            @Override
+            public JsonResultView<?> call() throws Exception {
+                CreditRepayment re = creditRepaymentService.saveOrUpdate(creditRepayment);
+                return new JsonResultView<>().setObject(re.getId());
+            }
+        };
+        return new WebAsyncTask<JsonResultView<?>>(callable);
+    }
+}

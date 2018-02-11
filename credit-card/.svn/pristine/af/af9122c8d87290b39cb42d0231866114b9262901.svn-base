@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout" layout:decorator="layout">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>信用卡</title>
+  <link rel="stylesheet" href="/static/css/layui.css" th:href="@{/static/css/layui.css}"></link>
+</head>
+<body class="layui-layout-body">
+    <div layout:fragment="content" style="padding: 15px;">
+        <form class="layui-form" action="#" th:action="@{/getBill}"  method="post">
+             <div class="layui-form-item">
+                <label class="layui-form-label">邮箱</label>
+                <div class="layui-input-block">
+                
+                  <select name="emailKey" >
+                      <option value="">请选择</option>
+                      <option th:each="email : ${T(com.pay.aile.bill.enums.EmailEnum).values()}" th:value="${email.key}" th:text="${email.value}"></option>
+
+                  </select>
+                </div>
+              </div>
+                    
+            <div class="layui-form-item">
+                <label class="layui-form-label">邮箱地址</label>
+                <div class="layui-input-block">
+                  <input type="text" name="email" lay-verify="title" autocomplete="off" placeholder="请输入标题" class="layui-input" />
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">密码</label>
+                <div class="layui-input-block">
+                  <input type="text" name="password" lay-verify="title" autocomplete="off" placeholder="请输入标题" class="layui-input"/>
+                </div>
+             </div>
+             
+             <div class="layui-form-item">
+                 <div class="layui-input-block">
+                  <button class="layui-btn" lay-submit="" lay-filter="demo1">立即提交</button>
+                  <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                </div>
+              </div>
+        </form>
+    <script>
+       layui.use('form', function(){
+          var form = layui.form; //只有执行了这一步，部分表单元素才会自动修饰成功
+          
+          //……
+          
+          //但是，如果你的HTML是动态生成的，自动渲染就会失效
+          //因此你需要在相应的地方，执行下述方法来手动渲染，跟这类似的还有 element.init();
+          form.render();
+          
+        //监听提交
+         form.on('submit(demo1)', function(data){
+           // layer.alert(JSON.stringify(data.field), {
+            //  title: '最终的提交信息'
+           // })
+            return true;
+          });
+        });
+    </script>
+    </div>
+   
+</body>
+ 
+</html>

@@ -1,0 +1,28 @@
+spring.application.name=bill-analyze
+server.port=8083
+server.context-path=/bill-analyze
+
+environment.production
+mongodb.dataSourceName=mdb_credit
+
+primary.datasource.dsname=mdb_credit_rw
+
+spring.mvc.static-path-pattern=/static/**
+spring.resources.static-locations=classpath:/static/
+
+spring.thymeleaf.mode=HTML5
+#spring.thymeleaf.encoding=UTF-8
+#spring.thymeleaf.content-type=text/html
+spring.thymeleaf.cache=false  
+#spring.thymeleaf.prefix= /templates/    
+#spring.thymeleaf.suffix= .html  
+#server.tomcat.access_log_enabled= true    
+#server.tomcat.basedir= target/tomcat 
+
+
+#redis config
+redis.sentinel=1
+redis.host=10.10.111.125:6373;10.10.111.126:6373;10.10.111.127:6373
+redis.password=redis
+redis.masterName=mymaster
+redis.dbIndex=0

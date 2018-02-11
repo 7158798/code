@@ -1,0 +1,25 @@
+package com.pay.card.service;
+
+import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.pay.card.BaseTest;
+
+public class CreditCardServiceImplTest extends BaseTest {
+
+    @Autowired
+    private CreditCardService cardService;
+
+    @Test
+    public void updateStatusTest() {
+        // cardService.updateCardStatusById(2383l);
+        cardService.updateCardStatusById(2392l, 1l);
+
+    }
+
+    @Test
+    public void updateTest() {
+        cardService.updateCardNameById("购物卡", 2383l);
+    }
+
+}

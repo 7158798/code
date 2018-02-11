@@ -1,0 +1,28 @@
+package com.pay.card.service.impl;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.pay.card.dao.CreditUserInfoDao;
+import com.pay.card.model.CreditUserInfo;
+import com.pay.card.service.CreditUserInfoService;
+
+public class CreditUserInfoServiceImpl implements CreditUserInfoService {
+
+    @Autowired
+    private CreditUserInfoDao creditUserInfoDao;
+
+    @Override
+    public List<CreditUserInfo> findCreditUserInfoAll() {
+
+        return creditUserInfoDao.findAll();
+    }
+
+    @Override
+    public Long saveCreditUserInfo(CreditUserInfo creditUserInfo) {
+        creditUserInfoDao.saveAndFlush(creditUserInfo);
+        return creditUserInfo.getId();
+    }
+
+}

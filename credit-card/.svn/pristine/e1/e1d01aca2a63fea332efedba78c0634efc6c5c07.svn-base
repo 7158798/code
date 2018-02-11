@@ -1,0 +1,105 @@
+package com.pay.aile.bill.analyze.banktemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditBillDetailRelation;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.entity.CreditUserBillRelation;
+import com.pay.aile.bill.entity.CreditUserCardRelation;
+import com.pay.aile.bill.entity.CreditUserEmailRelation;
+import com.pay.aile.bill.enums.CardStatus;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+
+/**
+ *
+ * @Description:
+ * @see: BaseBankSeparateShareDetailTemplate
+ *
+ *       多账户分开还款-共用明细的账单模板
+ *
+ *       无法区分每条明细对应到哪一张卡,所以认为每条明细属于每张卡每个账单
+ * @version 2017年11月28日 上午11:13:24
+ * @author chao.wang
+ */
+public abstract class BaseBankSeparateShareDetailTemplate extends BaseBankSeparateTemplate {
+    @Transactional
+    @Override
+    protected void handleResultInternal(AnalyzeParamsModel apm) {
+        Long emailId = apm.getEmailId();
+        int year = 0;
+        int month = 0;
+        // 保存或更新卡信息
+        List<CreditCard> cardList = apm.getResult().getCardList();
+        cardList = creditCardService.saveOrUpateCreditCard(cardList);
+        // 保存账单
+        List<CreditBill> billList = apm.getResult().getBillList();
+        for (int i = 0; i < billList.size(); i++) {
+            CreditBill bill = billList.get(i);
+            bill.setCardId(cardList.get(i).getId());
+            bill.setEmailId(emailId);
+            bill.setSentDate(apm.getSentDate());
+            bill.setCardNumbers(cardList.get(i).getNumbers());
+            bill.setFileId(apm.getFileId());
+            if (year == 0) {
+                year = Integer.valueOf(bill.getYear());
+            }
+            if (month == 0) {
+                month = Integer.valueOf(bill.getMonth());
+            }
+        }
+
+        if (!billList.isEmpty()) {
+            creditBillService.saveCreditBill(billList);
+        }
+
+        List<CreditBillDetail> detailList = apm.getResult().getDetailList();
+        List<CreditBillDetailRelation> relationList = new ArrayList<CreditBillDetailRelation>();
+        if (!detailList.isEmpty()) {
+            creditBillDetailService.batchSaveBillDetail(year, month, detailList);
+            billList.forEach(bill -> {
+                detailList.forEach(detail -> {
+                    CreditBillDetailRelation relation = new CreditBillDetailRelation();
+                    relation.setBillId(bill.getId());
+                    relation.setBillDetailId(detail.getId());
+                    relationList.add(relation);
+                });
+            });
+            creditBillDetailRelationService.batchSaveBillDetailRelation(year, month, relationList);
+        }
+        // 查询邮件和用户的关系
+        List<CreditUserEmailRelation> emialRelationList = userEmailRelationMapper.findByEmail(emailId);
+
+        // 保存账单和用户关系。
+        List<CreditUserBillRelation> billRelationList = new ArrayList<CreditUserBillRelation>();
+        billList.forEach(bill -> {
+            emialRelationList.forEach(userEmail -> {
+                CreditUserBillRelation billRelation = new CreditUserBillRelation();
+                billRelation.setBillId(bill.getId());
+                billRelation.setUserId(userEmail.getUserId());
+                billRelationList.add(billRelation);
+            });
+        });
+        userBillRelationMapper.batchInsert(billRelationList);
+
+        // 卡片和用户的关系
+        List<CreditUserCardRelation> cardRelationList = new ArrayList<CreditUserCardRelation>();
+        // 保存卡片和用户关系
+        for (CreditUserEmailRelation userEmail : emialRelationList) {
+            cardList.forEach(card -> {
+                CreditUserCardRelation cardRelation = new CreditUserCardRelation();
+                cardRelation.setCardId(card.getId());
+                cardRelation.setUserId(userEmail.getUserId());
+                cardRelation.setStatus(apm.getIsNew() ? CardStatus.NEW.value : CardStatus.AVAILABLE.value);
+                cardRelationList.add(cardRelation);
+            });
+        }
+        // 保存
+        userCardRelationMapper.batchInsert(cardRelationList);
+    }
+
+}

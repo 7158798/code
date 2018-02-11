@@ -1,0 +1,34 @@
+package com.pay.aile.bill.contant;
+
+public class Constant {
+
+    /**
+     * Hash
+     *
+     * hkey:credit_card_login_status
+     *
+     * key:email value:loginStatus
+     *
+     * 存放用户邮箱登录状态
+     */
+    public static String REDIS_LOGGIN_STATUS = "credit_card_login_status";
+
+    /**
+     * Set
+     *
+     * key:credit_card_cards_${email}
+     *
+     * value:{{"cardNo":"1234","bankCode":"ABC"},
+     * {"cardNo":"5678","bankCode":"CEB"}}
+     *
+     * 存放已解析的信用卡
+     */
+    public static String REDIS_CARDS = "credit_card_cards_";
+
+    /**
+     * key:credit_card_analysis_status_${email}
+     *
+     * value:5(初始值为已下载的账单数量,解析完一个则减一,若解析完成则为0)
+     */
+    public static String REDIS_ANALYSIS_STATUS = "credit_card_analysis_status_";
+}

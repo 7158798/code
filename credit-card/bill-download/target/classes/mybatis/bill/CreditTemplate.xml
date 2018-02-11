@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditTemplateMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditTemplate">
+		<id column="id" property="id" />
+		<result column="due_date" property="dueDate" />
+		<result column="current_amount" property="currentAmount" />
+		<result column="credits" property="credits" />
+		<result column="cash" property="cash" />
+		<result column="last_amount" property="lastAmount" />
+		<result column="repayment" property="repayment" />
+		<result column="consumption" property="consumption" />
+		<result column="transaction_date" property="transactionDate" />
+		<result column="billing_date" property="billingDate" />
+		<result column="transaction_description" property="transactionDescription" />
+		<result column="transaction_amount" property="transactionAmount" />
+		<result column="accountable_amount" property="accountableAmount" />
+		<result column="prepaid_cash_amount" property="prepaidCashAmount" />
+		<result column="details" property="details" />
+		<result column="cardtype_id" property="cardtypeId" />
+		<result column="cycle" property="cycle" />
+		<result column="bill_day" property="billDay" />
+		<result column="transaction_currency" property="transactionCurrency" />
+		<result column="cardholder" property="cardholder" />
+		<result column="minimum" property="minimum" />
+		<result column="year_month" property="yearMonth" />
+		<result column="card_numbers" property="cardNumbers" />
+		<result column="integral" property="integral" />
+
+		
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, due_date AS dueDate, current_amount AS currentAmount, credits, cash, last_amount AS lastAmount, repayment, consumption, transaction_date AS transactionDate, billing_date AS billingDate, transaction_description AS transactionDescription, transaction_amount AS transactionAmount, accountable_amount AS accountableAmount, prepaid_cash_amount AS prepaidCashAmount, details, cardtype_id AS cardtypeId,cycle,bill_day as billDay,transaction_currency AS transactionCurrency,cardholder,year_month as yearMonth,minimum,card_numbers AS cardNumbers,integral
+    </sql>
+
+</mapper>

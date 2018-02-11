@@ -1,0 +1,27 @@
+package com.pay.card.service;
+
+import java.util.List;
+
+import com.pay.card.model.CreditCard;
+
+public interface CreditCardService {
+    public CreditCard findCreditCard(CreditCard creditCard);
+
+    /**
+     *
+     * @Title: findCreditCardList
+     * @Description:查询信用卡列表
+     * @param creditCard
+     * @return List<CreditCard> 返回类型 @throws
+     */
+    public List<CreditCard> findCreditCardList(CreditCard creditCard);
+
+    /**
+     *
+     * @Title: saveOrUpdateCreditCard
+     * @Description:
+     * @param creditCard
+     * @return CreditCard 返回类型 @throws
+     */
+    public CreditCard saveOrUpdateCreditCard(CreditCard creditCard);
+}

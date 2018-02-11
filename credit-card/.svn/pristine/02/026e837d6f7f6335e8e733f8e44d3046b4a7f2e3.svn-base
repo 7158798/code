@@ -1,0 +1,113 @@
+package com.pay.card.model;
+
+import java.io.Serializable;
+
+import javax.persistence.Entity;
+import javax.persistence.Table;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
+/**
+ * @author qiaohui
+ *         银行
+ */
+@Table(name = "credit_bank")
+@Entity
+public class CreditBank extends BaseEntity implements Serializable {
+
+    /**
+     * @Fields field:field:{todo}(用一句话描述这个变量表示什么)
+     */
+
+    private static final long serialVersionUID = 5393897579463432731L;
+
+    /**
+     * 银行名称
+     */
+    private String name;
+
+    /**
+     * 简称
+     */
+    private String shortName;
+    /**
+     * 银行编码
+     */
+    private String code;
+    /**
+     * 是否支持网银
+     */
+    private Integer online;
+
+    /**
+     * 是否支持邮件
+     */
+    private Integer email;
+
+    private Long userId;
+
+    public String getCode() {
+        return code;
+    }
+
+    public Integer getEmail() {
+        return email;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Integer getOnline() {
+        return online;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setEmail(Integer email) {
+        this.email = email;
+    }
+
+    @Override
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setOnline(Integer online) {
+        this.online = online;
+    }
+
+    public void setShortName(String shortName) {
+        this.shortName = shortName;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    @Override
+    public String toString() {
+        return ToStringBuilder.reflectionToString(this, ToStringStyle.MULTI_LINE_STYLE);
+    }
+
+}

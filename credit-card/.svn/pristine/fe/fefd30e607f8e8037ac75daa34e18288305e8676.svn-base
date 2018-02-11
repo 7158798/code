@@ -1,0 +1,27 @@
+package com.pay.card;
+
+public class Constants {
+
+    public static final int COUNT_PER_PAGE = 10;
+
+    public static final int ACTION_COLLECT = 0;
+
+    public static final int ACTION_UNCOLLECT = 1;
+
+    public static final int CODE_SUCCESS = 0;
+
+    public static final int CODE_FAILED = 1;
+
+    public static final int INVALID = 0;
+
+    public static final int VALID = 1;
+
+    public static final int PAGE_SIZE = 10;
+
+    public static String REDIS_LOGGIN_STATUS = "credit_card_login_status";
+
+    public static String REDIS_CARDS = "credit_card_cards_";
+
+    public static String REDIS_ANALYSIS_STATUS = "credit_card_analysis_status_";
+
+}

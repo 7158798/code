@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditBillDetailRelationMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditBillDetailRelation">
+		<id column="id" property="id" />
+		<result column="bill_id" property="billId" />
+		<result column="bill_detail_id" property="billDetailId" />
+        <result column="status" property="status" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bill_id AS billId, bill_detail_id AS billDetailId, status,create_date as createDate,update_date as updateDate 
+    </sql>
+    <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_bill_detail_relation_${tableNum} (bill_id,bill_detail_id,status,create_date,update_date)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.billId},#{item.billDetailId},#{item.status},#{item.createDate},#{item.updateDate}}
+            )         
+        </foreach>
+    </insert>
+</mapper>

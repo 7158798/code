@@ -1,0 +1,283 @@
+package com.pay.aile.bill.analyze.banktemplate.icbc;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.analyze.banktemplate.BaseBankTemplate;
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditBillDetailRelation;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.entity.CreditUserBillRelation;
+import com.pay.aile.bill.entity.CreditUserCardRelation;
+import com.pay.aile.bill.entity.CreditUserEmailRelation;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.utils.DateUtil;
+import com.pay.aile.bill.utils.PatternMatcherUtil;
+
+/**
+ * @author ji
+ * @description 中国工商银行-牡丹贷记卡
+ */
+@Service
+public class ICBCMDCreditTemplate extends BaseBankTemplate implements AbstractICBCTemplate {
+
+    private ThreadLocal<String> incomeOutcome = new ThreadLocal<String>();
+
+    private final String ioSplitSign = ",";
+
+    @Override
+    public void initRules() {
+        super.initRules();
+        if (rules == null) {
+            rules = new CreditTemplate();
+            rules.setCardtypeId(14L);
+            rules.setCardholder("尊敬的[\\u4e00-\\u9fa5]+");
+            rules.setDueDate("贷记卡到期还款日 \\d{4}年\\d{1,2}月\\d{1,2}日");
+            rules.setCycle("账单周期\\d{4}年\\d{2}月\\d{2}日\\S\\d{4}年\\d{2}月\\d{2}日");
+            rules.setBillDay("对账单生成日\\d{4}年\\d{2}月\\d{2}日");
+            rules.setCurrentAmount(
+                    "\\d{4} -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB");
+            rules.setCardNumbers("\\d{4} -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB");
+            rules.setMinimum("\\d{4}\\(\\S+\\) 人民币 %s/RMB -?\\d+\\.?\\d*/RMB -?\\d+\\.?\\d*/RMB");
+            rules.setDetails(
+                    "\\d{4} \\d{4}-\\d{2}-\\d{2} \\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\d+\\.?\\d*/RMB+ \\d+\\.?\\d*/RMB+\\([\\u4e00-\\u9fa5]+\\)");
+            rules.setIntegral("个人综合积分 余额 \\d+");
+            rules.setTransactionDate("1");
+            rules.setBillingDate("2");
+            rules.setTransactionDescription("4");
+        }
+    }
+
+    @Override
+    protected void analyzeBillDate(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getBillDay())) {
+            String billDay = getValueByPattern("billDay", content, rules.getBillDay(), apm, "");
+            billDay = PatternMatcherUtil.getMatcherString("\\d{4}年\\d{2}月\\d{2}日", billDay);
+            if (StringUtils.hasText(billDay)) {
+                billDay = billDay.replaceAll("年", "").replaceAll("月", "").replaceAll("日", "").replaceAll("\\s+", "");
+                final String finalBillDay = billDay.substring(billDay.length() - 2);
+                cardList.forEach(card -> {
+                    card.setBillDay(finalBillDay);
+                });
+            }
+        }
+    }
+
+    @Override
+    protected void analyzeCardNo(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCardNumbers())) {
+            List<String> matherList = getValueListByPattern("cardNumbers", content, rules.getCardNumbers(), "");
+            if (!matherList.isEmpty()) {
+                for (int i = 0; i < matherList.size(); i++) {
+                    String mather = matherList.get(i);
+                    String[] sa = mather.split(defaultSplitSign);
+                    String cardNo = sa[0];
+                    CreditCard card = new CreditCard();
+                    card.setNumbers(cardNo);
+                    cardList.add(card);
+                }
+            }
+        }
+    }
+
+    /**
+     * 应还款额
+     */
+    @Override
+    protected void analyzeCurrentAmount(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCurrentAmount())) {
+            List<String> matherList = getValueListByPattern("currentAmount", content, rules.getCurrentAmount(), "");
+            if (!matherList.isEmpty()) {
+                String incomeOutcomeStr = "";
+                for (int i = 0; i < matherList.size(); i++) {
+                    String mather = matherList.get(i);
+                    mather = mather.replaceAll("/RMB", "");
+                    String[] sa = mather.split(defaultSplitSign);
+                    BigDecimal income = new BigDecimal(sa[2]);
+                    BigDecimal outcome = new BigDecimal(sa[3]);
+                    String currentAmount = sa[4];
+                    if (!currentAmount.startsWith("-")) {
+                        currentAmount = "0";
+                    } else {
+                        currentAmount = currentAmount.replaceAll("-", "");
+                    }
+                    CreditBill bill = new CreditBill();
+                    bill.setCurrentAmount(new BigDecimal(currentAmount));
+                    billList.add(bill);
+                    incomeOutcomeStr += income.add(outcome).toString() + ioSplitSign;
+                }
+                incomeOutcome.set(incomeOutcomeStr);
+            }
+        }
+    }
+
+    @Override
+    protected void analyzeCycle(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCycle())) {
+            String cycle = getValueByPattern("cycle", content, rules.getCycle(), apm, "");
+            List<String> list = PatternMatcherUtil.getMatcher("\\d{4}年\\d{2}月\\d{2}日", cycle);
+            billList.forEach(bill -> {
+                bill.setBeginDate(DateUtil.parseDate(list.get(0)));
+                bill.setEndDate(DateUtil.parseDate(list.get(1)));
+            });
+        }
+    }
+
+    @Override
+    protected void analyzeIntegral(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getIntegral())) {
+            String integral = getValueByPattern("integral", content, rules.getIntegral(), apm, "");
+            final String finalIntegral = PatternMatcherUtil.getMatcherString("\\d+\\.?\\d*", integral);
+            if (StringUtils.hasText(finalIntegral)) {
+                cardList.forEach(card -> {
+                    card.setIntegral(new BigDecimal(finalIntegral));
+                });
+            }
+        }
+    }
+
+    /**
+     *
+     * 最低还款额与额度
+     */
+    @Override
+    protected void analyzeMinimum(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getMinimum())) {
+            billList.forEach(bill -> {
+                String currentAmount = bill.getCurrentAmount().toString();
+                String rule = String.format(rules.getMinimum(), currentAmount);
+                String mather = getValueByPattern("minimun", content, rule, apm, "");
+                if (StringUtils.hasText(mather)) {
+                    String[] sa = mather.split(" ");
+                    String minimumAmount = sa[3].replaceAll("/RMB", "");
+                    String credits = sa[4].replaceAll("/RMB", "");
+                    bill.setMinimum(new BigDecimal(minimumAmount));
+                    bill.setCredits(new BigDecimal(credits));
+                }
+            });
+        }
+    }
+
+    @Transactional
+    @Override
+    protected void handleResultInternal(AnalyzeParamsModel apm) {
+        Long emailId = apm.getEmailId();
+        int year = 0;
+        int month = 0;
+        // 保存或更新卡信息
+        List<CreditCard> cardList = apm.getResult().getCardList();
+        cardList = creditCardService.saveOrUpateCreditCard(cardList);
+        // 保存账单
+        List<CreditBill> billList = apm.getResult().getBillList();
+        for (int i = 0; i < billList.size(); i++) {
+            CreditBill bill = billList.get(i);
+            bill.setCardId(cardList.get(i).getId());
+            bill.setEmailId(emailId);
+            bill.setSentDate(apm.getSentDate());
+            if (year == 0) {
+                year = Integer.valueOf(bill.getYear());
+            }
+            if (month == 0) {
+                month = Integer.valueOf(bill.getMonth());
+            }
+        }
+        if (!billList.isEmpty()) {
+            creditBillService.saveCreditBill(billList);
+        }
+        List<CreditBillDetail> detailList = apm.getResult().getDetailList();
+        List<CreditBillDetailRelation> relationList = new ArrayList<CreditBillDetailRelation>();
+        if (!detailList.isEmpty()) {
+            creditBillDetailService.batchSaveBillDetail(year, month, detailList);
+            String s = incomeOutcome.get();
+            s = s.substring(0, s.length() - 1);
+            String[] ioList = {};
+            if (StringUtils.hasText(s)) {
+                ioList = s.split(ioSplitSign);
+            }
+            int detailIndex = 0;
+            for (int i = 0; i < billList.size(); i++) {
+                CreditBill bill = billList.get(i);
+                BigDecimal ioTarget = new BigDecimal(ioList[i]);
+                BigDecimal ioAmount = BigDecimal.ZERO;
+                for (; detailIndex < detailList.size(); detailIndex++) {
+                    CreditBillDetailRelation relation = new CreditBillDetailRelation();
+                    relationList.add(relation);
+                    relation.setBillId(bill.getId());
+                    relation.setBillDetailId(detailList.get(detailIndex).getId());
+                    BigDecimal amount = new BigDecimal(detailList.get(detailIndex).getAccountableAmount()).abs();
+                    ioAmount = ioAmount.add(amount);
+                    if (ioAmount.doubleValue() == ioTarget.doubleValue()) {
+                        detailIndex++;
+                        break;
+                    }
+                }
+            }
+            creditBillDetailRelationService.batchSaveBillDetailRelation(year, month, relationList);
+        }
+        // 查询邮件和用户的关系
+        List<CreditUserEmailRelation> emialRelationList = userEmailRelationMapper.findByEmail(emailId);
+
+        // 保存账单和用户关系。
+        List<CreditUserBillRelation> billRelationList = new ArrayList<CreditUserBillRelation>();
+        billList.forEach(bill -> {
+            emialRelationList.forEach(userEmail -> {
+                CreditUserBillRelation billRelation = new CreditUserBillRelation();
+                billRelation.setBillId(bill.getId());
+                billRelation.setUserId(userEmail.getUserId());
+                billRelationList.add(billRelation);
+            });
+        });
+        userBillRelationMapper.batchInsert(billRelationList);
+
+        // 卡片和用户的关系
+        List<CreditUserCardRelation> cardRelationList = new ArrayList<CreditUserCardRelation>();
+        // 保存卡片和用户关系
+        for (CreditUserEmailRelation userEmail : emialRelationList) {
+            cardList.forEach(card -> {
+                CreditUserCardRelation cardRelation = new CreditUserCardRelation();
+                cardRelation.setCardId(card.getId());
+                cardRelation.setUserId(userEmail.getUserId());
+                cardRelationList.add(cardRelation);
+            });
+        }
+        // 保存
+        userCardRelationMapper.batchInsert(cardRelationList);
+    }
+
+    /**
+     * 设置信用卡类型
+     */
+    @Override
+    protected void setCardType() {
+        cardType = CardTypeEnum.ICBC_MDC;
+    }
+
+    @Override
+    protected void setField(CreditBillDetail cbd, int index, String value) {
+        if (index == 5) {
+            String transamount = PatternMatcherUtil.getMatcherString("\\d+\\.?\\d*", value);
+            if (value.indexOf("存入") != -1) {
+                transamount = "-" + transamount;
+            }
+            cbd.setTransactionAmount(transamount);
+            String currency = PatternMatcherUtil.getMatcherString("[a-zA-Z]+", value);
+            cbd.setTransactionCurrency(currency);
+        } else if (index == 6) {
+            String accountamount = PatternMatcherUtil.getMatcherString("\\d+\\.?\\d*", value);
+            if (value.indexOf("存入") != -1) {
+                accountamount = "-" + accountamount;
+            }
+            cbd.setAccountableAmount(accountamount);
+            String currency = PatternMatcherUtil.getMatcherString("[a-zA-Z]+", value);
+            cbd.setAccountType(currency);
+        }
+    }
+}

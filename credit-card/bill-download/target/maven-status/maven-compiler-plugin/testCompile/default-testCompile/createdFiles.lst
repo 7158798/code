@@ -1,0 +1,16 @@
+com\pay\aile\bill\mybatisplus\util\MpGenerator$3.class
+com\pay\aile\bill\service\impl\CreditBillServiceImplTest.class
+com\pay\aile\bill\mongo\MongoTest.class
+com\pay\aile\bill\job\DownloadMailSchedulerTest.class
+com\pay\aile\bill\mybatisplus\util\MpGenerator.class
+com\pay\aile\bill\service\impl\CreditBankServiceImplTest.class
+com\pay\aile\bill\mybatisplus\util\MpGenerator$2.class
+com\pay\aile\bill\service\impl\Base64Test.class
+com\pay\aile\bill\BillApplicationTests.class
+com\pay\aile\bill\mail\relation\CreditFileRelationTest.class
+com\pay\aile\bill\mail\DownloadMailTest.class
+com\pay\aile\bill\mongo\EmlToMongoUtilTest.class
+com\pay\aile\bill\mapper\EncodePasswordTest.class
+com\pay\aile\bill\mapper\CreditBankMapperTest.class
+com\pay\aile\bill\service\impl\CreditFileRelationImplTest.class
+com\pay\aile\bill\mybatisplus\util\MpGenerator$1.class

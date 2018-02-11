@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditBillMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditBill">
+		<id column="id" property="id" />
+		<result column="due_date" property="dueDate" />
+		<result column="current_amount" property="currentAmount" />
+		<result column="credits" property="credits" />
+		<result column="cash" property="cash" />
+		<result column="last_amount" property="lastAmount" />
+		<result column="repayment" property="repayment" />
+		<result column="consumption" property="consumption" />
+        <result column="email_id" property="emailId" />
+        <result column="card_id" property="cardId" />
+        <result column="status" property="status" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="bank_code" property="bankCode" />
+        <result column="account_type" property="accountType" />
+        <result column="begin_date" property="beginDate" />
+        <result column="end_date" property="endDate" />
+        <result column="year" property="year" />
+        <result column="month" property="month" />
+        <result column="minimum" property="minimum" />
+        <result column="file_id" property="fileId" />
+        <result column="bill_day" property="billDay" />
+        <result column="integral" property="integral" /> 
+         
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, due_date AS dueDate, current_amount AS currentAmount, credits, cash, 
+        last_amount AS lastAmount, repayment, consumption,email_id as emailId,card_id as cardId,
+        status,create_date as createDate,update_date as updateDate,bank_code as bankCode,
+        account_type as accountType,begin_date AS beginDate,end_date AS endDate,
+        year,month,minimum,file_id as fileId,bill_day as billDay,integral
+    </sql>
+  <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+    insert credit_bill (due_date,current_amount,credits,cash,last_amount,repayment,
+        consumption,email_id,card_id,status,create_date,bank_code,
+        account_type,begin_date,end_date,year,month,minimum,file_id,bill_day,integral)
+    values
+    <foreach collection="list" item="item" index="index" separator="," >  
+        (#{item.dueDate},#{item.currentAmount},#{item.credits},#{item.cash},#{item.lastAmount},
+        #{item.repayment},#{item.consumption},#{item.emailId},#{item.cardId},#{item.status},
+        #{item.createDate},#{item.bankCode},#{item.accountType},#{item.beginDate},#{item.endDate},
+        #{item.year},#{item.month},#{item.minimum},#{item.fileId},#{item.billDay},#{item.integral})         
+    </foreach>
+  </insert>
+</mapper>

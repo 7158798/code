@@ -1,0 +1,19 @@
+package com.pay.aile.bill.utils;
+
+import java.util.Calendar;
+import java.util.Date;
+
+/**
+ *
+ * @author Charlie
+ * @description
+ */
+public class DateUtil {
+    public static Date dateCompute(Date date, int field, int offset) {
+        Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        c.add(field, offset);
+        return c.getTime();
+    }
+
+}

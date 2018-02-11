@@ -1,0 +1,98 @@
+package com.pay.card.api;
+
+import java.util.Date;
+
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.http.client.methods.HttpGet;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.pay.card.enums.ChannelEnum;
+import com.pay.card.enums.StatusEnum;
+import com.pay.card.interceptor.UserResolverInterceptor;
+import com.pay.card.model.CreditUserInfo;
+import com.pay.card.service.CreditUserInfoService;
+import com.pay.card.utils.LocalCacheUtil;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import springfox.documentation.annotations.ApiIgnore;
+
+@Api("信用卡入口")
+@Controller
+@RequestMapping("/api/v1/login")
+public class CreditLoginController extends BaseController {
+
+    @Autowired
+    private CreditUserInfoService creditUserInfoService;
+
+    @ApiOperation(value = "信用卡首页入口", httpMethod = HttpGet.METHOD_NAME)
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "customerNo", dataType = "String", required = true, value = "商户编号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "phoneNo", dataType = "String", required = true, value = "商户手机号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "channel", dataType = "String", required = true, value = "渠道号", defaultValue = "1001") })
+    @RequestMapping("toIndex")
+    public String creditLogin(@UserResolverInterceptor @ApiIgnore CreditUserInfo user, HttpServletResponse response) {
+
+        try {
+
+            // 如果没有则保存
+            if (user.getId() == null) {
+                saveCreditUserInfo(user);
+            }
+
+        } catch (Exception e) {
+            logger.error("登录信息{}跳转信用卡首页异常:{}", user.toString(), e);
+        }
+        String url = "redirect:/api/v1/card/findCardIndex?customerNo=%s&phoneNo=%s&channel=%s";
+        url = String.format(url, user.getCustomerNo(), user.getPhoneNo(), user.getChannel());
+        return url;
+
+    }
+
+    private String getKey(CreditUserInfo user) {
+        String key = "";
+        if (ChannelEnum.MPOS.getCode().equals(user.getChannel())) {
+            key = user.getPhoneNo() + user.getChannel();
+        } else if (ChannelEnum.POS.getCode().equals(user.getChannel())) {
+            key = user.getCustomerNo() + user.getChannel();
+        }
+        return key;
+    }
+
+    private void saveCreditUserInfo(CreditUserInfo user) {
+        String key = getKey(user);
+        CreditUserInfo userInfo = creditUserInfoService.findCreditUserInfo(user);
+        if (userInfo == null) {
+            // 添加默认值
+            user.setStatus(StatusEnum.ENABLE.getStatus());
+            user.setCreateDate(new Date());
+            Long id = creditUserInfoService.saveCreditUserInfo(user);
+            user.setId(id);
+            LocalCacheUtil.put(key, id);
+        } else {
+            LocalCacheUtil.put(key, userInfo.getId());
+        }
+    }
+
+    private void saveCreditUserInfo(String phoneNo, String customerNo, String channel, String key) {
+
+        CreditUserInfo creditUserInfo = new CreditUserInfo();
+        creditUserInfo.setCustomerNo(customerNo);
+        creditUserInfo.setPhoneNo(phoneNo);
+        creditUserInfo.setChannel(channel);
+        creditUserInfo.setStatus(StatusEnum.ENABLE.getStatus());
+        creditUserInfo.setCreateDate(new Date());
+        CreditUserInfo userInfo = creditUserInfoService.findCreditUserInfo(creditUserInfo);
+        if (userInfo == null) {
+            Long id = creditUserInfoService.saveCreditUserInfo(creditUserInfo);
+            LocalCacheUtil.put(key, id);
+        } else {
+            LocalCacheUtil.put(key, userInfo.getId());
+        }
+    }
+}

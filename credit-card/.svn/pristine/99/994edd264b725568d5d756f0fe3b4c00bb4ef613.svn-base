@@ -1,0 +1,49 @@
+package com.pay.card.config;
+
+import javax.sql.DataSource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import com.pay.dsmclient.v2.c3p0.C3p0PooledDataSource;
+
+@EnableTransactionManagement
+@Configuration
+@ConditionalOnProperty(name = { "environment" }, havingValue = "ttttt")
+public class DataSourceConfig {
+    private static final Logger logger = LoggerFactory.getLogger(DataSourceConfig.class);
+
+    @Value("${pay.datasource.dsname}")
+    private String dsname;
+
+    @Bean
+    public DataSource dataSourceInit() {
+        logger.info("dsname===========================" + dsname);
+        C3p0PooledDataSource dataSource = null;
+        try {
+            dataSource = new C3p0PooledDataSource();
+            dataSource.setDataSourceName(dsname);
+        } catch (Exception e) {
+            logger.error("&&&&&&&&&&&&&&&&&&&&&&" + e.getMessage(), e);
+        }
+        logger.debug("#################### mysqlDatasource create success!");
+        return dataSource;
+    }
+
+    /**
+     * @Title: getJdbcTemplate @Description: 增加JdbcTemplate模版 @param @param
+     *         dataSource @param @return 参数 @return JdbcTemplate 返回类型 @throws
+     */
+    @Bean
+    public JdbcTemplate getJdbcTemplate(DataSource dataSource) {
+
+        return new JdbcTemplate(dataSource);
+    }
+
+}

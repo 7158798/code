@@ -1,0 +1,9 @@
+package com.pay.aile.bill.service;
+
+import com.pay.aile.bill.entity.CreditUserCardRelation;
+
+public interface CreditUserCardRelationService {
+
+    public CreditUserCardRelation findCreditUserCardRelation(Long userId);
+
+}

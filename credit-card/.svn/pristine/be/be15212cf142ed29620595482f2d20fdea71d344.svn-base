@@ -1,0 +1,57 @@
+package com.pay.aile.bill.analyze.banktemplate;
+
+import java.util.List;
+
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.utils.PatternMatcherUtil;
+
+/**
+ *
+ * @Description:
+ * @see: BaseBankSeparateStringTemplate
+ *
+ *       多账户分开还款-并且明细不能共用的模板基类
+ *
+ *       通过不同的卡号,截取经过格式化后的明细字符串中对应的内容进行提取
+ *
+ *       需要把每条明细对应各自的卡和账单
+ * @version 2017年11月28日 上午11:13:24
+ * @author chao.wang
+ */
+public abstract class BaseBankSeparateStringTemplate extends BaseBankSeparateTemplate {
+
+    @Override
+    protected void analyzeDetails(List<CreditBillDetail> detailList, String content, AnalyzeParamsModel apm,
+            List<CreditCard> cardList) {
+        for (int i = 0; i < cardList.size(); i++) {
+            CreditCard startCard = cardList.get(i);
+            CreditCard endCard = null;
+            if (i < cardList.size() - 1) {
+                endCard = cardList.get(i + 1);
+            }
+            String startCardNo = startCard.getNumbers();
+            String endCardNo = endCard == null ? "" : endCard.getNumbers();
+            int startIndex = indexOfCardDetail(content, startCardNo);
+            int endIndex = StringUtils.hasText(endCardNo) ? indexOfCardDetail(content, startCardNo) : -1;
+            String detailContent = content.substring(startIndex, endIndex == -1 ? content.length() : endIndex);
+
+            List<String> matchList = PatternMatcherUtil.getMatcher(rules.getDetails(), detailContent);
+            if (!matchList.isEmpty()) {
+                matchList.forEach(detail -> {
+                    CreditBillDetail cbd = setCreditBillDetail(detail);
+                    cbd.setCardNumbers(startCardNo);
+                    detailList.add(cbd);
+                });
+            }
+
+        }
+    }
+
+    protected int indexOfCardDetail(String content, String cardNo) {
+        return content.indexOf(cardNo);
+    }
+}

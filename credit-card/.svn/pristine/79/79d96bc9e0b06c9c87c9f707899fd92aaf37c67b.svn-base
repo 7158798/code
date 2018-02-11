@@ -1,0 +1,110 @@
+package com.pay.aile.bill.analyze.banktemplate;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.utils.PatternMatcherUtil;
+
+/**
+ *
+ * @Description:
+ * @see: BaseBankSeparateTemplate 多账户分开还款-并且明细不能共用的模板基类
+ *
+ *       通过卡号和包含明细的html标签容器,筛选出对应的标签,然后进行内容提取
+ *
+ *       需要把每条明细对应各自的卡和账单
+ * @version 2017年11月28日 上午11:13:24
+ * @author chao.wang
+ */
+public abstract class BaseBankSeparateHtmlTemplate extends BaseBankSeparateTemplate {
+
+    /**
+     * 包含账单明细的标签名称
+     */
+    protected String defaultDetailTag = "table";
+
+    @Override
+    protected void analyzeDetails(List<CreditBillDetail> detailList, String content, AnalyzeParamsModel apm,
+            List<CreditCard> cardList) {
+        Map<String, List<String>> detailMap = new HashMap<>();
+        Document document = Jsoup.parse(apm.getOriginContent());
+        Elements detailTables = document.getElementsByTag(defaultDetailTag);
+
+        cardList.forEach(card -> {
+            String cardNo = card.getNumbers();
+            for (int i = 0; i < detailTables.size(); i++) {
+                Element table = detailTables.get(i);
+                String text = table.text().replaceAll("\\s+", "");
+                // 判断是否是包含账单明细的标签容器
+                if (StringUtils.hasText(text) && hasDetail(text, cardNo)) {
+                    // 对包含账单明细的html进行格式化
+                    String html = formatDetailHtml(table.html(), defaultExtractTag);
+                    if (detailMap.containsKey(cardNo)) {
+                        detailMap.get(cardNo).add(html);
+                    } else {
+                        List<String> list = new ArrayList<>();
+                        list.add(html);
+                        detailMap.put(cardNo, list);
+                    }
+                    break;
+                }
+            }
+        });
+
+        if (!detailMap.isEmpty()) {
+            detailMap.entrySet().stream().forEach(item -> {
+                String cardNo = item.getKey();
+                List<String> detailContentList = item.getValue();
+                if (!detailContentList.isEmpty()) {
+                    detailContentList.forEach(detailContent -> {
+                        List<String> matchList = PatternMatcherUtil.getMatcher(rules.getDetails(), detailContent);
+                        if (!matchList.isEmpty()) {
+                            matchList.forEach(detail -> {
+                                CreditBillDetail cbd = setCreditBillDetail(detail);
+                                cbd.setCardNumbers(cardNo);
+                                detailList.add(cbd);
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    /**
+     *
+     * @Description 对匹配到的明细html进行格式化
+     * @param detailHtml
+     * @param tagName
+     * @return
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    protected String formatDetailHtml(String detailHtml, String tagName) {
+        return extractor.extract(detailHtml, defaultExtractTag);
+    }
+
+    /**
+     *
+     * @Description 判断是否匹配到明细
+     * @param text
+     * @param cardNo
+     * @return
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    protected boolean hasDetail(String text, String cardNo) {
+        return text.startsWith(cardNo);
+    }
+}

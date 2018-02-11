@@ -1,0 +1,12 @@
+package com.pay.card.service;
+
+import java.util.List;
+
+import com.pay.card.model.CreditUserInfo;
+
+public interface CreditUserInfoService {
+
+    public List<CreditUserInfo> findCreditUserInfoAll();
+
+    public Long saveCreditUserInfo(CreditUserInfo creditUserInof);
+}

@@ -1,0 +1,37 @@
+package com.pay.card.dao;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pay.card.model.CreditCard;
+
+public interface CreditCardDao extends JpaRepository<CreditCard, Long>, JpaSpecificationExecutor<CreditCard> {
+
+    @Query("select c from CreditCard c where c.numbers = ?1 and id<>?2 ")
+    public CreditCard findByNumbers(String numbers, Long cardId);
+
+    @Transactional
+    @Query("SELECT cc from CreditCard cc where EXISTS (SELECT cucr from CreditUserCardRelation cucr where cucr.cardId = cc.id and cucr.userId = ?1 and cucr.status = 1 )")
+    public List<CreditCard> findCreditCard(Long userId);
+
+    @Query("select c from CreditCard c where ( c.source = 0 and c.billDay=?1) or (c.source = 1 and EXISTS( select t.id from CreditUserCardRelation t where t.cardId = c.id and t.billDay=?2) ) ")
+    public List<CreditCard> findCreditCardListByBillDay(String billDay1, Integer billDay);
+
+    @Transactional
+    @Modifying
+    @Query("update CreditCard set name = ?1 where id = ?2")
+    public void updateCardNameById(String cardName, Long cardId);
+
+    @Transactional
+    @Modifying
+    @Query("update CreditCard set repayment = repayment + ?4 ,update_date = ?3 where id = ?1 and user_id = ?2")
+    public void updateCardRePayMent(Long cardId, Long userId, Date updateDate, BigDecimal rePayMent);
+
+}

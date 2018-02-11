@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditBillMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditBill">
+		<id column="id" property="id" />
+		<result column="due_date" property="dueDate" />
+		<result column="current_amount" property="currentAmount" />
+		<result column="credits" property="credits" />
+		<result column="cash" property="cash" />
+		<result column="last_amount" property="lastAmount" />
+		<result column="repayment" property="repayment" />
+		<result column="consumption" property="consumption" />
+        <result column="email_id" property="emailId" />
+        <result column="card_id" property="cardId" />
+        <result column="status" property="status" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="bank_code" property="bankCode" />
+        <result column="account_type" property="accountType" />
+        <result column="begin_date" property="beginDate" />
+        <result column="end_date" property="endDate" />
+        <result column="year" property="year" />
+        <result column="month" property="month" />
+        <result column="minimum" property="minimum" />
+        
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, due_date AS dueDate, current_amount AS currentAmount, credits, cash, last_amount AS lastAmount, repayment, consumption,begin_date AS beginDate,end_date AS endDate,year,month,minimum
+    </sql>
+    
+    <insert id="insertCreditBill" parameterType="com.pay.aile.bill.entity.CreditBill" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+    insert into credit_bill
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="dueDate != null" >
+        due_date,
+      </if>
+      <if test="currentAmount != null" >
+        current_amount,
+      </if>
+      <if test="credits != null" >
+        credits,
+      </if>
+      <if test="cash != null" >
+        cash,
+      </if>
+      <if test="lastAmount != null" >
+        last_amount,
+      </if>
+      <if test="repayment != null" >
+        repayment,
+      </if>
+      <if test="consumption != null" >
+        consumption,
+      </if>
+      <if test="emailId != null" >
+        email_id,
+      </if>
+      <if test="cardId != null" >
+        card_id,
+      </if>
+      <if test="status != null" >
+        status,
+      </if>
+      <if test="createDate != null" >
+        create_date,
+      </if>
+      <if test="updateDate != null" >
+        update_date,
+      </if>
+      <if test="bankCode != null" >
+        bank_code,
+      </if>
+      <if test="accountType != null" >
+        account_type,
+      </if>
+      <if test="beginDate != null" >
+        begin_date,
+      </if>
+       <if test="endDate != null" >
+        end_date,
+      </if>
+      
+      <if test="year != null" >
+        year,
+      </if>
+      
+      <if test="month != null" >
+        month,
+      </if>
+      <if test="minimum != null" >
+        minimum,
+      </if>
+      
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="dueDate != null" >
+        #{dueDate,jdbcType=DATE},
+      </if>
+      <if test="currentAmount != null" >
+        #{currentAmount,jdbcType=VARCHAR},
+      </if>
+      <if test="credits != null" >
+        #{credits,jdbcType=VARCHAR},
+      </if>
+      <if test="cash != null" >
+        #{cash,jdbcType=VARCHAR},
+      </if>
+      <if test="lastAmount != null" >
+        #{lastAmount,jdbcType=VARCHAR},
+      </if>
+      <if test="repayment != null" >
+        #{repayment,jdbcType=DECIMAL},
+      </if>
+      <if test="consumption != null" >
+        #{consumption,jdbcType=DECIMAL},
+      </if>
+      <if test="emailId != null" >
+        #{emailId,jdbcType=BIGINT},
+      </if>
+      <if test="cardId != null" >
+        #{cardId,jdbcType=BIGINT},
+      </if>
+      <if test="status != null" >
+        #{status,jdbcType=INTEGER},
+      </if>
+      <if test="createDate != null" >
+        #{createDate,jdbcType=DATE},
+      </if>
+      <if test="updateDate != null" >
+        #{updateDate,jdbcType=DATE},
+      </if>
+      <if test="bankCode != null" >
+        #{bankCode,jdbcType=VARCHAR},
+      </if>
+      <if test="accountType != null" >
+        #{accountType,jdbcType=VARCHAR},
+      </if>
+      <if test="beginDate != null" >
+        #{beginDate,jdbcType=DATE},
+      </if>
+      <if test="endDate != null" >
+        #{endDate,jdbcType=DATE},
+      </if>
+         <if test="year != null" >
+        #{year,jdbcType=VARCHAR},
+      </if>
+      <if test="month != null" >
+        #{month,jdbcType=VARCHAR},
+      </if>
+       <if test="minimum != null" >
+        #{minimum,jdbcType=DECIMAL},
+      </if>
+    </trim>
+  </insert>
+  <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+    insert credit_bill (due_date,current_amount,credits,cash,last_amount,repayment,
+        consumption,email_id,card_id,status,create_date,update_date,bank_code,
+        account_type,begin_date,end_date,year,month,minimum)
+    values
+    <foreach collection="list" item="item" index="index" separator="," >  
+        (#{item.dueDate},#{item.currentAmount},#{item.credits},#{item.cash},#{item.lastAmount},
+        #{item.repayment},#{item.consumption},#{item.emailId},#{item.cardId},#{item.status},
+        #{item.createDate},#{item.updateDate},#{item.bankCode},#{item.accountType},
+        #{item.beginDate},#{item.endDate},#{item.year},#{item.month},#{item.minimum})         
+    </foreach>
+  </insert>
+</mapper>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditCardMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditCard">
+        <id column="id" property="id" />
+        <result column="bank_id" property="bankId" />
+        <result column="bill_day" property="billDay" />
+        <result column="credits" property="credits" />
+        <result column="cash" property="cash" />
+        <result column="name" property="name" />
+        <result column="complete_numbers" property="completeNumbers" />
+        <result column="numbers" property="numbers" />
+        <result column="prepaid_cash_amount" property="prepaidCashAmount" />
+        <result column="cardholder" property="cardholder" />
+        <result column="integral" property="integral" />
+        <result column="email" property="email" />
+        <result column="bill_amount" property="billAmount" />
+        <result column="due_day" property="dueDay" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="minimum" property="minimum" />
+        <result column="status" property="status" />
+        <result column="begin_date" property="beginDate" />
+        <result column="end_date" property="endDate" />
+        <result column="due_date" property="dueDate" />
+        <result column="complete_numbers" property="completeNumbers" />
+        <result column="user_id" property="userId" />
+        
+	</resultMap>
+    <resultMap id="WithBankResultMap" type="com.pay.aile.bill.entity.CreditCard">
+        <id column="id" property="id" />
+        <result column="bank_id" property="bankId" />
+        <result column="bill_day" property="billDay" />
+        <result column="credits" property="credits" />
+        <result column="cash" property="cash" />
+        <result column="name" property="name" />
+        <result column="numbers" property="numbers" />
+        <result column="complete_numbers" property="completeNumbers" />
+        <result column="prepaid_cash_amount" property="prepaidCashAmount" />
+        <result column="cardholder" property="cardholder" />
+        <result column="integral" property="integral" />
+        <result column="email" property="email" />
+        <result column="bill_amount" property="billAmount" />
+        <result column="due_day" property="dueDay" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="minimum" property="minimum" />
+        <result column="status" property="status" />
+        <result column="code" property="bankCode" />
+        <result column="short_name" property="bankName" />
+    </resultMap>
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bank_id , bill_day , credits, cash, name , numbers, complete_numbers,
+        prepaid_cash_amount as prepaidCashAmount,cardholder,integral,email,
+        bill_amount as billAmount,due_day as dueDay,create_date as createDate,update_date as updateDate,
+        minimum,status
+    </sql>
+   <select id="findCardByBill" resultMap="WithBankResultMap">
+     select 
+        a.id, a.bank_id , a.bill_day , a.credits, a.cash, a.name , a.numbers, numbers, complete_numbers ,
+        a.prepaid_cash_amount ,a.cardholder,a.integral,a.email,
+        a.bill_amount,a.due_day,a.create_date,a.update_date,
+        a.minimum,a.status,b.code,b.short_name
+     from credit_card a left join credit_bank b on a.bank_id = b.id
+     where a.source=0 and user_id=#{userId} and a.id in  
+      <foreach item="item" index="index" collection=" #{cardIdList nyh}" open="(" separator="," close=")">  
+     #{item}  
+    </foreach>  
+  </select>
+   <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_card (bank_id,bill_day,credits,cash,name,numbers,prepaid_cash_amount,
+        cardholder,integral,email,bill_amount,due_day,create_date,minimum,begin_date,end_date,
+        complete_numbers,user_id)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.bankId},#{item.billDay},#{item.credits},#{item.cash},#{item.name},
+            #{item.numbers},#{item.prepaidCashAmount},#{item.cardholder},#{item.integral},
+            #{item.email},#{item.billAmount},#{item.dueDay},#{item.createDate},
+            #{item.minimum},#{item.beginDate},#{item.endDate},#{item.completeNumbers},
+            ,#{item.userId}
+            )         
+        </foreach>
+    </insert>
+  
+  <select id="findByUserId" resultMap="BaseResultMap" parameterType="java.lang.Long"  >
+     select * from credit_card where user_id = #{userId}
+   
+  </select>
+  
+</mapper>

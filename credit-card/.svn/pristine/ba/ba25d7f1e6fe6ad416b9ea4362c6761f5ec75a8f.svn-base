@@ -1,0 +1,14 @@
+package com.pay.card.dao;
+
+import java.util.List;
+
+import com.pay.card.model.CreditBillDetail;
+
+public interface CreditBillDetailDao {
+
+    public int findBillDatailCount(Long billId, String yearMonth);
+
+    public List<CreditBillDetail> findBillDetailList(Long billId, Long userId, String yearMonth, int pageNumber,
+                    int pageSize);
+
+}

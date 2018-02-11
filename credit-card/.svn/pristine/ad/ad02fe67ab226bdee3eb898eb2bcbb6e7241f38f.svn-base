@@ -1,0 +1,76 @@
+package com.pay.aile.bill.web;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.aile.bill.contant.Constant;
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditEmail;
+import com.pay.aile.bill.enums.ResultEmun;
+import com.pay.aile.bill.job.DownloadMailScheduler;
+import com.pay.aile.bill.job.RedisJobHandle;
+import com.pay.aile.bill.service.CreditBillService;
+import com.pay.aile.bill.service.CreditUserEmailRelationService;
+
+@Controller
+public class CreditBillController {
+    private static Logger logger = LoggerFactory.getLogger(CreditBillController.class);
+    public static final long refreshSeconds = 180L;
+    @Autowired
+    private CreditBillService creditBillService;
+    @Autowired
+    private CreditUserEmailRelationService creditUserEmailRelationService;
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    @RequestMapping(value = "billList")
+    public String gotoList(CreditBill creditBill, Model model) {
+        List<CreditBill> billList = creditBillService.getBillList(creditBill);
+        model.addAttribute("billList", billList);
+        return "billList";
+    }
+
+    @RequestMapping(value = "/updateBill")
+    @ResponseBody
+    public JSONObject updateBill(CreditEmail email) {
+        String userId = email.getUserId();
+        try {
+            List<CreditEmail> eamilList = creditUserEmailRelationService.findEmailByUser(userId);
+            // 修改队列中的email对象，将其设置为可执行状态
+
+            eamilList.forEach(e -> {
+                String jsonString = redisTemplate.opsForValue()
+                        .get(RedisJobHandle.MAIL_DOWANLOD_JOB_CONTENT.concat(String.valueOf(e.getId())));
+
+                CreditEmail creditEmail = JSONObject.parseObject(jsonString, CreditEmail.class);
+
+                if (System.currentTimeMillis() - creditEmail.getLastJobTimestamp() >= refreshSeconds * 1000) {
+                    creditEmail.setIsNew(true);
+                    creditEmail.setLastJobTimestamp(
+                            System.currentTimeMillis() - DownloadMailScheduler.loopIntervalSeconds * 1000 - 1);
+                    creditEmail.setLastJobExecutionTime(0);
+                    // 初始化
+                    redisTemplate.opsForValue().set(Constant.REDIS_ANALYSIS_STATUS + email.getEmail(), "0");
+                    redisTemplate.opsForValue().set(Constant.REDIS_ANALYZED_STATUS + email.getEmail(), "0");
+                    redisTemplate.opsForValue().set(
+                            RedisJobHandle.MAIL_DOWANLOD_JOB_CONTENT.concat(String.valueOf(e.getId())),
+                            JSONObject.toJSONString(creditEmail));
+                }
+
+            });
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            return ResultEmun.FAIL.getJsonMsg();
+        }
+        return ResultEmun.SUCCESS.getJsonMsg();
+    }
+}

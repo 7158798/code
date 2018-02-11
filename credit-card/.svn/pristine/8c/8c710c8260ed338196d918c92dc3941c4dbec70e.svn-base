@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditBillDetailMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditBillDetail">
+		<id column="id" property="id" />
+		<result column="bill_id" property="billId" />
+		<result column="transaction_date" property="transactionDate" />
+		<result column="billing_date" property="billingDate" />
+		<result column="transaction_description" property="transactionDescription" />
+		<result column="transaction_amount" property="transactionAmount" />
+		<result column="accountable_amount" property="accountableAmount" />
+		<result column="account_type" property="accountType" />
+        <result column="status" property="status" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+         <result column="transaction_currency" property="transactionCurrency" />
+        
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bill_id AS billId, transaction_date AS transactionDate, billing_date AS billingDate, transaction_description AS transactionDescription, transaction_amount AS transactionAmount, accountable_amount AS accountableAmount, account_type AS accountType,transaction_currency AS transactionCurrency 
+    </sql>
+    <insert id="insertCreditBillDetail" parameterType="com.pay.aile.bill.entity.CreditBillDetail"  useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into credit_bill_detail
+        <trim prefix="(" suffix=")" suffixOverrides="," >
+          <if test="billId != null" >
+            bill_id,
+          </if>
+          <if test="transactionDate != null" >
+            transaction_date,
+          </if>
+          <if test="billingDate != null" >
+            billing_date,
+          </if>
+          <if test="transactionDescription != null" >
+            transaction_description,
+          </if>
+          <if test="transactionAmount != null" >
+            transaction_amount,
+          </if>
+          <if test="accountableAmount != null" >
+            accountable_amount,
+          </if>
+          <if test="accountType != null" >
+            account_type,
+          </if>
+          <if test="status != null" >
+            status,
+          </if>
+          <if test="createDate != null" >
+            create_date,
+          </if>
+          <if test="updateDate != null" >
+            update_date,
+          </if>
+          <if test="transactionCurrency != null" >
+            transaction_currency,
+          </if>
+          
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides="," >
+          <if test="billId != null" >
+            #{billId,jdbcType=INTEGER},
+          </if>
+          <if test="transactionDate != null" >
+            #{transactionDate,jdbcType=DATE},
+          </if>
+          <if test="billingDate != null" >
+            #{billingDate,jdbcType=DATE},
+          </if>
+          <if test="transactionDescription != null" >
+            #{transactionDescription,jdbcType=VARCHAR},
+          </if>
+          <if test="transactionAmount != null" >
+            #{transactionAmount,jdbcType=VARCHAR},
+          </if>
+          <if test="accountableAmount != null" >
+            #{accountableAmount,jdbcType=DECIMAL},
+          </if>
+          <if test="accountType != null" >
+            #{accountType,jdbcType=DECIMAL},
+          </if>
+          <if test="status != null" >
+            #{status,jdbcType=INTEGER},
+          </if>
+          <if test="createDate != null" >
+            #{createDate,jdbcType=DATE},
+          </if>
+          <if test="updateDate != null" >
+            #{updateDate,jdbcType=DATE},
+          </if>
+          
+          <if test="transactionCurrency != null" >
+            #{transactionCurrency,jdbcType=VARCHAR},
+          </if>
+        </trim>
+    </insert>
+</mapper>

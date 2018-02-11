@@ -1,0 +1,216 @@
+package com.pay.card.service.impl;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Subquery;
+import javax.transaction.Transactional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.card.bean.CreditRePayMentBean;
+import com.pay.card.dao.CreditBillDao;
+import com.pay.card.dao.CreditCardDao;
+import com.pay.card.dao.CreditRepaymentDao;
+import com.pay.card.dao.CreditUserCardRelationDao;
+import com.pay.card.dao.CreditUserInfoDao;
+import com.pay.card.enums.RepaymentTypeEnum;
+import com.pay.card.enums.StatusEnum;
+import com.pay.card.model.CreditBill;
+import com.pay.card.model.CreditCard;
+import com.pay.card.model.CreditRepayment;
+import com.pay.card.model.CreditUserBillRelation;
+import com.pay.card.model.CreditUserInfo;
+import com.pay.card.service.CreditRepaymentService;
+import com.pay.card.utils.DateUtil;
+import com.pay.commons.utils.lang.JsonUtils;
+
+@Service
+public class CreditRepaymentServiceImpl implements CreditRepaymentService {
+    private static Logger logger = LoggerFactory.getLogger(CreditRepaymentServiceImpl.class);
+
+    @Autowired
+    private CreditRepaymentDao creditRepaymentDao;
+
+    @Autowired
+    private CreditBillDao creditBillDao;
+
+    @Autowired
+    private CreditCardDao creditCardDao;
+
+    @Autowired
+    private CreditUserInfoDao creditUserInfoDao;
+    @Autowired
+    private CreditUserCardRelationDao creditUserCardRelationDao;
+
+    @Override
+    @Transactional
+    public CreditRepayment delete(CreditRepayment creditRepayment) {
+        CreditRepayment repayment = null;
+        if (creditRepayment.getId() != null) {
+            repayment = creditRepaymentDao.findOne(creditRepayment.getId());
+
+            repayment.setStatus(StatusEnum.DISENABLE.getStatus());
+
+            creditRepaymentDao.saveAndFlush(repayment);
+
+            // 淇敼鍏崇郴琛ㄤ腑鐨勮繕娆鹃噾棰?
+            creditUserCardRelationDao.updateCardRepayment(repayment.getCardId(), repayment.getUserId(), new Date(), -repayment.getAmount()
+                    .doubleValue());
+
+        }
+
+        return repayment;
+    }
+
+    @Override
+    public List<JSONObject> findRePaymentDetail(CreditRepayment creditRepayment) {
+        List<JSONObject> resultList = new ArrayList<JSONObject>();
+        // 还款明细
+        List<CreditRepayment> list = creditRepaymentDao.findRePaymentDetail(creditRepayment.getCardId());
+        // 账单列表
+        // TODO
+        CreditBill creditBill = new CreditBill();
+        CreditCard creditCard = new CreditCard();
+        creditCard.setId(creditRepayment.getCardId());
+        creditBill.setCard(creditCard);
+        Sort sort = new Sort(Direction.DESC, "id");
+        List<CreditBill> billList = creditBillDao.findAll(getSpecification(creditBill), sort);
+        getRepaymentJsonArray(resultList, list, billList);
+
+        return resultList;
+    }
+
+    @Override
+    public List<CreditRepayment> findRepaymentList(CreditRepayment creditRepayment) {
+        Sort sort = new Sort(Direction.ASC, "id");
+        return creditRepaymentDao.findAll(getSpecification(creditRepayment), sort);
+    }
+
+    private void getRepaymentJsonArray(List<JSONObject> resultList, List<CreditRepayment> list, List<CreditBill> billList) {
+
+        for (CreditBill creditBill : billList) {
+            JSONObject json = new JSONObject();
+            String date = creditBill.getYear() + "-" + creditBill.getMonth() + "-" + creditBill.getBillDay();
+            date = DateUtil.getBillCycle(date);
+            // String beginDate = date.split("/")[0];
+            // String endDate = date.split("/")[1];
+
+            String month = creditBill.getMonth();
+            json.put("billCycle", date);
+            json.put("year", creditBill.getYear());
+            json.put("month", month);
+            List<CreditRePayMentBean> paymentBeanList = new ArrayList<CreditRePayMentBean>();
+            BigDecimal amount = new BigDecimal(0);
+            for (CreditRepayment creditRepayment : list) {
+                CreditRePayMentBean creditRePayMentBean = null;
+                if (month.equals(creditRepayment.getMonth() + "")) {
+                    creditRePayMentBean = new CreditRePayMentBean();
+                    creditRePayMentBean.setId(creditRepayment.getId());
+                    creditRePayMentBean.setPaymentAamout(creditRepayment.getAmount() + "");
+                    creditRePayMentBean.setPaymentDate(DateUtil.formatMMDD(creditRepayment.getCreateDate()));
+                    creditRePayMentBean.setType(creditRepayment.getType() + "");
+                    creditRePayMentBean.setTypeName(RepaymentTypeEnum.getMsg(creditRepayment.getType()));
+                    amount = amount.add(creditRepayment.getAmount());
+                    json.put("sumAmount", amount);
+                }
+                if (creditRePayMentBean != null) {
+                    paymentBeanList.add(creditRePayMentBean);
+                }
+                json.put("rePayMentList", paymentBeanList);
+            }
+            resultList.add(json);
+        }
+        logger.info("还款记录：{}", JsonUtils.toJsonString(resultList));
+
+    }
+
+    public Specification<CreditBill> getSpecification(CreditBill creditBill) {
+        return new Specification<CreditBill>() {
+            @Override
+            public Predicate toPredicate(Root<CreditBill> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                List<Predicate> subList = new ArrayList<Predicate>();
+                if (creditBill.getCard() != null) {
+                    list.add(cb.equal(root.get("card").get("id").as(Long.class), creditBill.getCard().getId()));
+                }
+                // 根据userid查询
+                if (creditBill.getUserId() != null) {
+                    Subquery<CreditUserBillRelation> subquery = query.subquery(CreditUserBillRelation.class);
+                    Root<CreditUserBillRelation> subroot = subquery.from(CreditUserBillRelation.class);
+                    subquery.select(subroot.get("id"));
+                    Predicate userPredicate = cb.equal(subroot.get("userId").as(Long.class), creditBill.getUserId());
+                    Predicate statusPredicate = cb.equal(subroot.get("status").as(Integer.class), 1);
+                    Predicate joinPredicate = cb.equal(subroot.get("billId").as(Integer.class), root.get("id").as(Long.class));
+
+                    subquery.where(userPredicate, statusPredicate, joinPredicate);
+                    Predicate exists = cb.exists(subquery);
+                    list.add(exists);
+                }
+
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    private Specification<CreditRepayment> getSpecification(CreditRepayment creditRepayment) {
+        return new Specification<CreditRepayment>() {
+            @Override
+            public Predicate toPredicate(Root<CreditRepayment> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                List<Predicate> subList = new ArrayList<Predicate>();
+                if (creditRepayment.getUserInfo() != null) {
+                    list.add(cb.equal(root.get("userInfo").get("id").as(Long.class), creditRepayment.getUserInfo().getId()));
+                }
+                if (creditRepayment.getBill() != null) {
+                    Subquery<CreditUserBillRelation> subquery = query.subquery(CreditUserBillRelation.class);
+                    Root<CreditUserBillRelation> subroot = subquery.from(CreditUserBillRelation.class);
+                    subquery.select(subroot.get("id"));
+                    Predicate statusPredicate = cb.equal(subroot.get("status").as(Integer.class), 1);
+                    Predicate joinPredicate = cb.equal(subroot.get("billId").as(Long.class), root.get("bill").get("id").as(Long.class));
+                    subquery.where(statusPredicate, joinPredicate);
+                    Predicate exists = cb.exists(subquery);
+                    list.add(exists);
+                }
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+        };
+
+    }
+
+    @Override
+    @Transactional
+    public CreditRepayment saveOrUpdate(CreditRepayment creditRepayment) {
+        if (creditRepayment.getBill() != null && creditRepayment.getBill().getId() != null) {
+            CreditBill bill = creditBillDao.findOne(creditRepayment.getBill().getId());
+            creditRepayment.setBill(bill);
+
+        }
+        CreditUserInfo userInfo = creditUserInfoDao.findOne(creditRepayment.getUserInfo().getId());
+        creditRepayment.setUserInfo(userInfo);
+        creditRepayment.setCreateDate(new Date());
+        creditRepayment.setStatus(StatusEnum.ENABLE.getStatus());
+        creditRepayment = creditRepaymentDao.saveAndFlush(creditRepayment);
+        creditCardDao.updateCardRePayMent(creditRepayment.getCardId(), userInfo.getId(), new Date(), creditRepayment.getAmount());
+        creditUserCardRelationDao.updateCardRepayment(creditRepayment.getCardId(), creditRepayment.getUserId(), new Date(), creditRepayment
+                .getAmount().doubleValue());
+
+        return creditRepayment;
+    }
+}

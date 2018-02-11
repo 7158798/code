@@ -1,0 +1,35 @@
+/**
+ * @Title: DevDataSourceConfig.java
+ * @Package com.pay.card.config
+ * @Description: TODO(用一句话描述该文件做什么)
+ * @author jing.jin
+ * @date 2017年11月20日
+ * @version V1.0
+ */
+
+package com.pay.card.config;
+
+import javax.sql.DataSource;
+
+import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+
+/**
+ * @ClassName: DevDataSourceConfig
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年11月20日
+ */
+// @EnableTransactionManagement
+// @Configuration
+// @ConditionalOnProperty(name = { "environment.dev" })
+public class DevDataSourceConfig {
+
+    @Bean
+    @ConfigurationProperties(prefix = "pay.datasource")
+    public DataSource dataSource() {
+        return DataSourceBuilder.create().build();
+    }
+
+}

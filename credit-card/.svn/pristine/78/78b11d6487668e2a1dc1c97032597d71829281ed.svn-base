@@ -1,0 +1,82 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.pay.card.Constants;
+import com.pay.card.dao.CreditCardDao;
+import com.pay.card.model.CreditCard;
+import com.pay.card.service.CreditCardService;
+
+@Service
+public class CreditCardServiceImpl implements CreditCardService {
+    @Autowired
+    private CreditCardDao creditCardDao;
+
+    @Override
+    public CreditCard findCreditCard(CreditCard creditCard) {
+        return creditCardDao.findOne(creditCard.getId());
+
+    }
+
+    /**
+     *
+     * @Title: findCreditCardList
+     * @Description:查询信用卡列表
+     * @param creditCard
+     * @return List<CreditCard> 返回类型 @throws
+     */
+    @Override
+    public List<CreditCard> findCreditCardList(CreditCard creditCard) {
+        Sort sort = new Sort(Direction.ASC, "id");
+        Specification<CreditCard> spec = getSpecification(creditCard);
+
+        return creditCardDao.findAll(spec, sort);
+    }
+
+    public Specification<CreditCard> getSpecification(CreditCard creditCard) {
+        return new Specification<CreditCard>() {
+            @Override
+            public Predicate toPredicate(Root<CreditCard> root, CriteriaQuery<?> query,
+                    CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                if (StringUtils.hasText(creditCard.getCustomerNo())) {
+                    list.add(cb.equal(root.get("customerNo").as(String.class),
+                            creditCard.getCustomerNo()));
+                }
+                if (StringUtils.hasText(creditCard.getEmail())) {
+                    list.add(cb.equal(root.get("email").as(String.class), creditCard.getEmail()));
+                }
+                list.add(cb.equal(root.get("status"), Constants.VALID));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    /**
+     *
+     * @Title: saveOrUpdateCreditCard
+     * @Description:
+     * @param creditCard
+     * @return CreditCard 返回类型 @throws
+     */
+    @Override
+    public CreditCard saveOrUpdateCreditCard(CreditCard creditCard) {
+        creditCardDao.saveAndFlush(creditCard);
+        return creditCard;
+    }
+}

@@ -1,0 +1,309 @@
+package com.pay.card.model;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicUpdate;
+
+@Table(name = "credit_card")
+@Entity
+@DynamicInsert
+@DynamicUpdate
+public class CreditCard extends BaseEntity implements Serializable {
+
+    /**
+     * @Fields
+     */
+
+    private static final long serialVersionUID = -8413068283560221578L;
+
+    /**
+     * 商户编号
+     */
+    private String customerNo;
+
+    /**
+     * 商户手机号
+     */
+    private String phoneNo;
+
+    /**
+     * 所属银行
+     */
+    private CreditBank bank;
+
+    /**
+     * 到期还款日期
+     */
+    private Date dueDate;
+
+    /**
+     * 到期还款日
+     */
+    private String dueDay;
+    /**
+     * 账单日
+     */
+    private String billDay;
+
+    /**
+     * 账单金额
+     */
+    private BigDecimal billAmount;
+
+    /**
+     * 还款金额
+     */
+    private BigDecimal repayment;
+
+    /**
+     * 持卡人
+     */
+
+    private String cardholder;
+
+    /**
+     * 取现额度
+     */
+    private BigDecimal cash;
+    /**
+     * 已消费金额
+     */
+    private BigDecimal consumption;
+
+    /**
+     * 创建时间
+     */
+    private Date createDate;
+
+    /**
+     * 信用额度
+     */
+    private BigDecimal credits;
+
+    /**
+     * 名称
+     */
+    private String name;
+
+    /**
+     * 卡号
+     */
+    private String numbers;
+
+    /**
+     * 预借现金额度
+     */
+    private String prepaidCashAmount;
+
+    /**
+     * 账单
+     */
+    private List<CreditBill> billList;
+
+    /**
+     * 还款
+     */
+    private List<CreditRepayment> repaymentList;
+    /**
+     * 未出账金额
+     */
+    private BigDecimal notAccounted;
+
+    /**
+     * 邮件
+     */
+    private String email;
+
+    private Long userId;
+
+    @ManyToOne(cascade = { CascadeType.REFRESH }, fetch = FetchType.EAGER, optional = true)
+    public CreditBank getBank() {
+        return bank;
+    }
+
+    public BigDecimal getBillAmount() {
+        return billAmount;
+    }
+
+    public String getBillDay() {
+        return billDay;
+    }
+
+    @OneToMany(cascade = { CascadeType.REFRESH }, fetch = FetchType.LAZY, orphanRemoval = false)
+    @JoinColumn(name = "card_id")
+    public List<CreditBill> getBillList() {
+        return billList;
+    }
+
+    public String getCardholder() {
+        return cardholder;
+    }
+
+    public BigDecimal getCash() {
+        return cash;
+    }
+
+    public BigDecimal getConsumption() {
+        return consumption;
+    }
+
+    @Override
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public BigDecimal getCredits() {
+        return credits;
+    }
+
+    public String getCustomerNo() {
+        return customerNo;
+    }
+
+    public Date getDueDate() {
+        return dueDate;
+    }
+
+    public String getDueDay() {
+        return dueDay;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public BigDecimal getNotAccounted() {
+        return notAccounted;
+    }
+
+    public String getNumbers() {
+        return numbers;
+    }
+
+    public String getPhoneNo() {
+        return phoneNo;
+    }
+
+    public String getPrepaidCashAmount() {
+        return prepaidCashAmount;
+    }
+
+    public BigDecimal getRepayment() {
+        return repayment;
+    }
+
+    @OneToMany(mappedBy = "bill", cascade = { CascadeType.REFRESH }, fetch = FetchType.LAZY, orphanRemoval = false)
+    public List<CreditRepayment> getRepaymentList() {
+        return repaymentList;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setBank(CreditBank bank) {
+        this.bank = bank;
+    }
+
+    public void setBillAmount(BigDecimal billAmount) {
+        this.billAmount = billAmount;
+    }
+
+    public void setBillDay(String billDay) {
+        this.billDay = billDay;
+    }
+
+    public void setBillList(List<CreditBill> billList) {
+        this.billList = billList;
+    }
+
+    public void setCardholder(String cardholder) {
+        this.cardholder = cardholder;
+    }
+
+    public void setCash(BigDecimal cash) {
+        this.cash = cash;
+    }
+
+    public void setConsumption(BigDecimal consumption) {
+        this.consumption = consumption;
+    }
+
+    @Override
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
+    }
+
+    public void setCredits(BigDecimal credits) {
+        this.credits = credits;
+    }
+
+    public void setCustomerNo(String customerNo) {
+        this.customerNo = customerNo;
+    }
+
+    public void setDueDate(Date dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public void setDueDay(String dueDay) {
+        this.dueDay = dueDay;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setNotAccounted(BigDecimal notAccounted) {
+        this.notAccounted = notAccounted;
+    }
+
+    public void setNumbers(String numbers) {
+        this.numbers = numbers;
+    }
+
+    public void setPhoneNo(String phoneNo) {
+        this.phoneNo = phoneNo;
+    }
+
+    public void setPrepaidCashAmount(String prepaidCashAmount) {
+        this.prepaidCashAmount = prepaidCashAmount;
+    }
+
+    public void setRepayment(BigDecimal repayment) {
+        this.repayment = repayment;
+    }
+
+    public void setRepaymentList(List<CreditRepayment> repaymentList) {
+        this.repaymentList = repaymentList;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+}

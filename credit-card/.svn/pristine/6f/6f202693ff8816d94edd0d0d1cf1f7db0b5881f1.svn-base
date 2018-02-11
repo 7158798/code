@@ -1,0 +1,52 @@
+package com.pay.card.Exception;
+
+public class CreditClientException extends Exception {
+    /**
+    *
+    */
+    private static final long serialVersionUID = 6929934268186469897L;
+    private String code;
+    private String message;
+
+    public CreditClientException(String code, Exception cause) {
+        super(cause);
+        this.code = code;
+    }
+
+    public CreditClientException(String code, String exceptionMsg) {
+        this.code = code;
+        message = exceptionMsg;
+    }
+
+    public CreditClientException(String code, String message, Exception cause) {
+        super(cause);
+        this.code = code;
+        this.message = message;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    @Override
+    public String getMessage() {
+        return message == null ? super.getMessage() : message + ". " + super.getMessage();
+    }
+
+    public String getOriginalMessage() {
+        return message;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    @Override
+    public String toString() {
+        return code + "/" + getMessage();
+    }
+}

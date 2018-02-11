@@ -1,0 +1,97 @@
+package com.pay.aile.bill.analyze.banktemplate.cmb;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.analyze.banktemplate.BaseBankTemplate;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.entity.CreditUserCardRelation;
+import com.pay.aile.bill.entity.CreditUserEmailRelation;
+import com.pay.aile.bill.enums.CardStatus;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.exception.AnalyzeBillException;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+
+/**
+ *
+ * @author Charlie
+ * @description 招商银行消费提醒邮件账单
+ */
+@Service
+public class CMBDetailTemplate extends BaseBankTemplate implements AbstractCMBTemplate {
+
+    @Override
+    public void initRules() {
+        super.initRules();
+        if (rules == null) {
+            rules = new CreditTemplate();
+            rules.setDetails("\\d{4} \\d{8} \\d{2}:\\d{2}:\\d{2} \\S+ \\S+ -?\\d+\\.?\\d*");
+            rules.setCardNumbers("0");
+            rules.setTransactionDate("1");
+            rules.setTransactionDescription("4");
+            rules.setTransactionAmount("5");
+            rules.setCardholder("尊敬的[\\u4e00-\\u9fa5]+");
+        }
+    }
+
+    @Override
+    protected void checkCardAndBill(AnalyzeParamsModel apm) throws AnalyzeBillException {
+        if (apm.getResult().getCardList().isEmpty()) {
+            throw new AnalyzeBillException("未抓取到卡号");
+        }
+        // 检查是否包含卡号和持卡人
+        for (CreditCard card : apm.getResult().getCardList()) {
+            if (!StringUtils.hasText(card.getNumbers())) {
+                throw new AnalyzeBillException("无法获取卡号");
+            }
+        }
+        if (apm.getResult().getDetailList().isEmpty()) {
+            throw new AnalyzeBillException("无法获取明细");
+        }
+    }
+
+    @Transactional
+    @Override
+    protected void handleResultInternal(AnalyzeParamsModel apm) {
+        Long emailId = apm.getEmailId();
+        List<CreditCard> cardList = apm.getResult().getCardList();
+        List<CreditBillDetail> detailList = apm.getResult().getDetailList();
+        CreditCard saveCard = cardList.get(0);
+        // 保存或更新卡信息,若已经存在同一银行,相同邮箱的卡记录,说明已经抓取到一个统一还款卡号,则此次抓取的卡号不予记录
+        saveCard.setStatus(CardStatus.UNAVAILABLE.value);
+        creditCardService.saveOrUpdateUnionCreditCard(saveCard);
+        // 保存明细
+        if (!detailList.isEmpty()) {
+            detailList.forEach(detail -> {
+                detail.setCardId(saveCard.getId());
+            });
+            creditBillDetailService.batchSaveBillDetail(0, 0, detailList);
+        }
+        // 查询邮件和用户的关系
+        List<CreditUserEmailRelation> emialRelationList = userEmailRelationMapper.findByEmail(emailId);
+
+        // 卡片和用户的关系
+        List<CreditUserCardRelation> cardRelationList = new ArrayList<CreditUserCardRelation>();
+        // 保存卡片和用户关系
+        for (CreditUserEmailRelation userEmail : emialRelationList) {
+            CreditUserCardRelation cardRelation = new CreditUserCardRelation();
+            cardRelation.setCardId(saveCard.getId());
+            cardRelation.setUserId(userEmail.getUserId());
+            cardRelation.setStatus(CardStatus.UNAVAILABLE.value);
+            cardRelationList.add(cardRelation);
+        }
+        // 保存
+        userCardRelationMapper.batchInsert(cardRelationList);
+    }
+
+    @Override
+    protected void setCardType() {
+        cardType = CardTypeEnum.CMB_DETAIL;
+    }
+}

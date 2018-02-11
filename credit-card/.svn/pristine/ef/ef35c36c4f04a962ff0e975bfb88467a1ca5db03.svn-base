@@ -1,0 +1,58 @@
+package com.pay.aile.bill.analyze.banktemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditBillDetailRelation;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+
+/**
+ *
+ * @Description:
+ * @see: BaseBankSeparateShareDetailTemplate 多账户分开还款-共用明细的账单模板
+ *
+ *       无法区分每条明细对应到哪一张卡,所以认为每条明细属于每张卡每个账单
+ * @version 2017年11月28日 上午11:13:24
+ * @author chao.wang
+ */
+public abstract class BaseBankSeparateShareDetailTemplate extends BaseBankTemplate {
+
+    @Override
+    protected void handleResultInternal(AnalyzeParamsModel apm) {
+        Long emailId = apm.getEmailId();
+        int month = 0;
+        // 保存或更新卡信息
+        List<CreditCard> cardList = apm.getResult().getCardList();
+        creditCardService.saveOrUpateCreditCard(cardList);
+        // 保存账单
+        List<CreditBill> billList = apm.getResult().getBillList();
+        for (int i = 0; i < billList.size(); i++) {
+            CreditBill bill = billList.get(i);
+            bill.setCardId(cardList.get(i).getId());
+            bill.setEmailId(emailId);
+            bill.setSentDate(apm.getSentDate());
+            month = Integer.valueOf(bill.getMonth());
+        }
+        if (!billList.isEmpty()) {
+            creditBillService.saveCreditBill(billList);
+        }
+        List<CreditBillDetail> detailList = apm.getResult().getDetailList();
+        List<CreditBillDetailRelation> relationList = new ArrayList<CreditBillDetailRelation>();
+        if (!detailList.isEmpty()) {
+            creditBillDetailService.batchSaveBillDetail(month, detailList);
+            billList.forEach(bill -> {
+                detailList.forEach(detail -> {
+                    CreditBillDetailRelation relation = new CreditBillDetailRelation();
+                    relation.setBillId(bill.getId());
+                    relation.setBillDetailId(detail.getId());
+                    relationList.add(relation);
+                });
+            });
+            creditBillDetailRelationService.batchSaveBillDetailRelation(month, relationList);
+        }
+    }
+
+}

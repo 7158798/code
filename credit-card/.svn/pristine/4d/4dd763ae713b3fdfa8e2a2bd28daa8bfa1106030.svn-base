@@ -1,0 +1,156 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout" layout:decorator="layout">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>信用卡</title>
+  <link rel="stylesheet" href="/static/css/layui.css" th:href="@{/static/css/layui.css}"></link>
+</head>
+<body class="layui-layout-body">
+    <div layout:fragment="content" style="padding: 15px;">
+       <form class="layui-form" action="#" th:action="@{/saveTemplate}" th:object="${message}" method="post">
+             <div class="layui-form-item">
+                <label class="layui-form-label">银行</label>
+                <div class="layui-input-block">
+                
+                  <select name="bankId" >
+                      <option value="">请选择</option>
+                      <option th:each="b : ${bankList}" th:value="${b.id}" th:text="${b.name}"></option>
+
+                  </select>
+                </div>
+              </div>
+                    
+            <div class="layui-form-item">
+                <label class="layui-form-label">类型名称</label>
+                <div class="layui-input-block">
+                  <input type="text" name="name" lay-verify="title" autocomplete="off" placeholder="请输入类型名称" class="layui-input" />
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">类型编码</label>
+                <div class="layui-input-block">
+                  <input type="text" name="code" lay-verify="title" autocomplete="off" placeholder="请输入类型编码" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">账单周期</label>
+                <div class="layui-input-block">
+                  <input type="text" name="cycle" lay-verify="title" autocomplete="off" placeholder="请输入账单周期" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">到期还款日</label>
+                <div class="layui-input-block">
+                  <input type="text" name="dueDate" lay-verify="title" autocomplete="off" placeholder="请输入到期还款日" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">信用额度</label>
+                <div class="layui-input-block">
+                  <input type="text" name="credits" lay-verify="title" autocomplete="off" placeholder="请输入信用额度" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">取现额度</label>
+                <div class="layui-input-block">
+                  <input type="text" name="cash" lay-verify="title" autocomplete="off" placeholder="请输入取现额度" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">入账币种/金额</label>
+                <div class="layui-input-block">
+                  <input type="text" name="accountableAmount" lay-verify="title" autocomplete="off" placeholder="请输入入账币种/金额" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">消费/取现/其他费用</label>
+                <div class="layui-input-block">
+                  <input type="text" name="consumption" lay-verify="title" autocomplete="off" placeholder="请输入入消费/取现/其他费用" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">本期应还款额</label>
+                <div class="layui-input-block">
+                  <input type="text" name="currentAmount" lay-verify="title" autocomplete="off" placeholder="请输入入账币种/金额" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">账单明细</label>
+                <div class="layui-input-block">
+                  <input type="text" name="details" lay-verify="title" autocomplete="off" placeholder="请输入账单明细" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">上期还款金额</label>
+                <div class="layui-input-block">
+                  <input type="text" name="lastAmount" lay-verify="title" autocomplete="off" placeholder="请输入账单明细" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">预借现金额度</label>
+                <div class="layui-input-block">
+                  <input type="text" name="prepaidCashAmount" lay-verify="title" autocomplete="off" placeholder="请输入预借现金额度" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">还款/退货/费用返还</label>
+                <div class="layui-input-block">
+                  <input type="text" name="repayment" lay-verify="title" autocomplete="off" placeholder="请输入还款/退货/费用返还" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">交易币种/金额</label>
+                <div class="layui-input-block">
+                  <input type="text" name="transactionAmount" lay-verify="title" autocomplete="off" placeholder="请输入还款/退货/费用返还" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">交易日期</label>
+                <div class="layui-input-block">
+                  <input type="text" name="transactionDate" lay-verify="title" autocomplete="off" placeholder="请输入还款/退货/费用返还" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                <label class="layui-form-label">交易说明</label>
+                <div class="layui-input-block">
+                  <input type="text" name="transactionDescription" lay-verify="title" autocomplete="off" placeholder="请输入交易说明" class="layui-input"/>
+                </div>
+             </div>
+               <div class="layui-form-item">
+                <label class="layui-form-label">记账日志</label>
+                <div class="layui-input-block">
+                  <input type="text" name="billingDate" lay-verify="title" autocomplete="off" placeholder="请输入记账日志" class="layui-input"/>
+                </div>
+             </div>
+             <div class="layui-form-item">
+                 <div class="layui-input-block">
+                  <button class="layui-btn" lay-submit="" lay-filter="demo1">立即提交</button>
+                  <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                </div>
+              </div>
+        </form>
+    <script>
+       layui.use('form', function(){
+          var form = layui.form; //只有执行了这一步，部分表单元素才会自动修饰成功
+          
+          //……
+          
+          //但是，如果你的HTML是动态生成的，自动渲染就会失效
+          //因此你需要在相应的地方，执行下述方法来手动渲染，跟这类似的还有 element.init();
+          form.render();
+          
+        //监听提交
+         form.on('submit(demo1)', function(data){
+           // layer.alert(JSON.stringify(data.field), {
+            //  title: '最终的提交信息'
+           // })
+            return true;
+          });
+        });
+    </script>
+    </div>
+   
+</body>
+ 
+</html>

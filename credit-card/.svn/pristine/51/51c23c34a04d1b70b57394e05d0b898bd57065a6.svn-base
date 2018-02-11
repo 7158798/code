@@ -1,0 +1,161 @@
+package com.pay.aile.bill.utils;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.aile.bill.entity.CreditEmail;
+import com.pay.aile.bill.entity.CreditFile;
+import com.pay.aile.bill.entity.EmailFile;
+import com.pay.aile.bill.exception.MailBillException;
+import com.pay.aile.bill.job.FileQueueRedisHandle;
+import com.pay.aile.bill.service.mail.relation.CreditFileRelation;
+
+/***
+ * DownloadUtil.java
+ *
+ * @author shinelon
+ *
+ * @date 2017年10月30日
+ *
+ */
+@Component
+public class MongoDownloadUtil {
+    private static final Logger logger = LoggerFactory.getLogger(MongoDownloadUtil.class);
+    private static final String DOC_KEY_FILE_NAME = "fileName";
+    private static final String DOC_KEY_FILE_EMAIL = "email";
+    private static final String emailFile = "emailFile_";
+
+    @Autowired
+    private CreditFileRelation creditFileRelation;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private FileQueueRedisHandle fileQueueRedisHandle;
+
+    public String getFile(String fileName) throws MailBillException {
+
+        try {
+
+            Criteria criteria = new Criteria(DOC_KEY_FILE_NAME);
+            criteria.is(fileName);
+            Query query = new Query(criteria);
+            EmailFile ef = mongoTemplate.findOne(query, EmailFile.class);
+            return ef.getContent();
+        } catch (Exception e) {
+
+            logger.error(e.getMessage());
+            throw new MailBillException(e.getMessage());
+        }
+
+    }
+
+    public EmailFile getFile(String fileName, int month) {
+        try {
+
+            EmailFile ef = mongoTemplate.findOne(new Query(Criteria.where(DOC_KEY_FILE_NAME).is(fileName)),
+                    EmailFile.class, emailFile + month);
+            return ef;
+        } catch (Exception e) {
+
+            logger.error(e.getMessage());
+
+        }
+        return null;
+    }
+
+    @SuppressWarnings("static-access")
+    public EmailFile getFile(String fileName, String email) throws MailBillException {
+
+        try {
+
+            EmailFile ef = mongoTemplate.findOne(
+                    new Query(Criteria.where(DOC_KEY_FILE_NAME).is(fileName).and(DOC_KEY_FILE_EMAIL).is(email)),
+                    EmailFile.class);
+            return ef;
+        } catch (Exception e) {
+
+            logger.error(e.getMessage());
+            throw new MailBillException(e.getMessage());
+        }
+
+    }
+
+    public EmailFile getFile(String fileName, String email, int month) {
+        try {
+
+            EmailFile ef = mongoTemplate.findOne(
+                    new Query(Criteria.where(DOC_KEY_FILE_NAME).is(fileName).and(DOC_KEY_FILE_EMAIL).is(email)),
+                    EmailFile.class, emailFile + month);
+            return ef;
+        } catch (Exception e) {
+
+            logger.error(e.getMessage());
+
+        }
+        return null;
+    }
+
+    public void saveCreditFile(List<CreditFile> creditFileList, CreditEmail creditEmail) {
+        creditFileRelation.saveNotExitsCreditFile(creditFileList, creditEmail);
+    }
+
+    public void saveEmailFiles(List<EmailFile> emailFileList) {
+        emailFileList.forEach(e -> {
+            logger.info("mongofile，months========================={}", e.getSentDate().substring(4, 6));
+
+        });
+        Map<Integer, List<EmailFile>> groupEmailFileList = emailFileList.stream()
+                .collect(Collectors.groupingBy(EmailFile::getGroupingBySentDate));
+        groupEmailFileList.forEach((month, list) -> {
+
+            List<String> fileNames = list.stream().map(e -> e.getFileName()).collect(Collectors.toList());
+            Criteria criteria = new Criteria(DOC_KEY_FILE_NAME);
+            logger.info("保存文件 {}", fileNames);
+            criteria.in(fileNames);
+            Query query = new Query(criteria);
+            List<EmailFile> exitsEmailFileList = mongoTemplate.find(query, EmailFile.class, emailFile + month);
+            List<String> exitsfileNames = exitsEmailFileList.stream().map(e -> e.getFileName())
+                    .collect(Collectors.toList());
+            List<EmailFile> insertList = list.stream().filter(e -> !exitsfileNames.contains(e.getFileName()))
+                    .collect(Collectors.toList());
+            if (insertList.size() > 0) {
+                mongoTemplate.insert(insertList, emailFile + month);
+
+            }
+        });
+
+    }
+
+    public String saveFile(EmailFile emailFile, CreditFile creditFile) {
+        logger.info("调用saveFile1=============================={}", creditFile.getId());
+        mongoTemplate.save(emailFile);
+        // 保存文件关系
+        creditFileRelation.saveCreditFile(creditFile);
+        return emailFile.getFileName();
+    }
+
+    public void saveFile(List<EmailFile> emailFileList, List<CreditFile> creditFileList, CreditEmail creditEmail) {
+        logger.info("调用saveFile2=============================={}", emailFileList.size());
+        saveEmailFiles(emailFileList);
+        saveCreditFile(creditFileList, creditEmail);
+        logger.info("fileQueueRedisHandle=============================={}", JSONObject.toJSONString(creditEmail));
+        if (creditEmail.getIsNew()) {
+            fileQueueRedisHandle.bathLeftPushFile(creditFileList);
+        } else {
+            fileQueueRedisHandle.bathPushFile(creditFileList);
+        }
+    }
+
+}

@@ -1,0 +1,25 @@
+package com.pay.card.service;
+
+import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.alibaba.fastjson.JSON;
+import com.pay.card.BaseTest;
+import com.pay.card.model.CreditChannel;
+
+public class CreditChannelServiceImplTest extends BaseTest {
+
+    @Autowired
+    private CreditChannelService creditChannelService;
+
+    @Test
+    public void savetest() {
+
+        CreditChannel channel = new CreditChannel();
+        channel.setChannelName("i刷");
+        channel.setStatus(1);
+        CreditChannel channeCreditChannel = creditChannelService.saveCreditChannel(channel);
+
+        System.out.println(JSON.toJSONString(channeCreditChannel));
+    }
+}

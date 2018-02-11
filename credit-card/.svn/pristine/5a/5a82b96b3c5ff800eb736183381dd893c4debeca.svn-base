@@ -1,0 +1,112 @@
+package com.pay.card.service.impl;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.pay.card.Constants;
+import com.pay.card.dao.CreditCardDao;
+import com.pay.card.dao.CreditUserCardRelationDao;
+import com.pay.card.model.CreditCard;
+import com.pay.card.service.CreditCardService;
+
+@Service
+public class CreditCardServiceImpl implements CreditCardService {
+    @Autowired
+    private CreditCardDao creditCardDao;
+    @Autowired
+    private CreditUserCardRelationDao creditUserCardRelationDao;
+
+    @Override
+    public CreditCard findCreditCard(CreditCard creditCard) {
+        return creditCardDao.findOne(getSpecificationByUserId(creditCard));
+    }
+
+    /**
+     * @Title: findCreditCardList
+     * @Description:查询信用卡列表
+     * @param creditCard
+     * @return List<CreditCard> 返回类型 @throws
+     */
+    @Override
+    public List<CreditCard> findCreditCardList(CreditCard creditCard) {
+        Sort sort = new Sort(Direction.ASC, "id");
+        Specification<CreditCard> spec = getSpecification(creditCard);
+
+        return creditCardDao.findAll(spec, sort);
+    }
+
+    public Specification<CreditCard> getSpecification(CreditCard creditCard) {
+        return new Specification<CreditCard>() {
+            @Override
+            public Predicate toPredicate(Root<CreditCard> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                if (StringUtils.hasText(creditCard.getEmail())) {
+                    list.add(cb.equal(root.get("email").as(String.class), creditCard.getEmail()));
+                }
+                list.add(cb.equal(root.get("userId").as(Long.class), creditCard.getUserId()));
+                list.add(cb.equal(root.get("status"), Constants.VALID));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    private Specification<CreditCard> getSpecificationByUserId(CreditCard creditCard) {
+        return new Specification<CreditCard>() {
+            @Override
+            public Predicate toPredicate(Root<CreditCard> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                list.add(cb.equal(root.get("id").as(Long.class), creditCard.getId()));
+                list.add(cb.equal(root.get("status"), Constants.VALID));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    /**
+     * @Title: saveOrUpdateCreditCard
+     * @Description:
+     * @param creditCard
+     * @return CreditCard 返回类型 @throws
+     */
+    @Override
+    public CreditCard saveOrUpdateCreditCard(CreditCard creditCard) {
+        creditCardDao.saveAndFlush(creditCard);
+        if (creditCard.getId() != 0) {
+            creditCardDao.updateCardNameById(creditCard.getName(), creditCard.getId());
+        }
+        return creditCard;
+    }
+
+    @Override
+    public void updateCardNameById(String cardName, Long cardId) {
+        creditCardDao.updateCardNameById(cardName, cardId);
+    }
+
+    @Override
+    public void updateCardRePayMent(Long cardId, Long userId, BigDecimal rePayMent) {
+        creditCardDao.updateCardRePayMent(cardId, userId, new Date(), rePayMent);
+    }
+
+    @Override
+    public void updateCardStatusById(Long cardId, Long userId) {
+        creditUserCardRelationDao.updateCardStatusById(cardId, userId, new Date());
+    }
+}

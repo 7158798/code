@@ -1,0 +1,38 @@
+package com.pay.card.service;
+
+import java.util.List;
+
+import com.pay.card.model.CreditUserInfo;
+
+/**
+ * @Description: 用户信息接口
+ * @see: CreditUserInfoService 此处填写需要参考的类
+ * @version 2017年11月30日 下午4:08:00
+ * @author zhibin.cui
+ */
+public interface CreditUserInfoService {
+
+    /**
+     * @Title: findCreditUserInfo
+     * @Description: 查询用户信息
+     * @param creditUserInfo
+     * @return CreditUserInfo
+     */
+    public CreditUserInfo findCreditUserInfo(CreditUserInfo creditUserInfo) throws Exception;
+
+    /**
+     * @Title: findCreditUserInfoAll
+     * @Description: 查询所有用户信息
+     * @param
+     * @return List<CreditUserInfo>
+     */
+    public List<CreditUserInfo> findCreditUserInfoAll() throws Exception;
+
+    /**
+     * @Title: saveCreditUserInfo
+     * @Description: 保存用户信息
+     * @param creditUserInfo
+     * @return Long: userId
+     */
+    public Long saveCreditUserInfo(CreditUserInfo creditUserInfo) throws Exception;
+}

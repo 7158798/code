@@ -1,0 +1,184 @@
+/**
+ * @Title: CardBillDayTask.java
+ * @Package com.pay.card.task
+ * @Description: TODO(用一句话描述该文件做什么)
+ * @author jing.jin
+ * @date 2017年12月13日
+ * @version V1.0
+ */
+
+package com.pay.card.task;
+
+import java.math.BigDecimal;
+import java.net.InetAddress;
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.pay.card.enums.StatusEnum;
+import com.pay.card.model.CreditBank;
+import com.pay.card.model.CreditCard;
+import com.pay.card.model.CreditUserCardRelation;
+import com.pay.card.model.TaskExecutionResult;
+import com.pay.card.service.CreditCardService;
+import com.pay.card.service.CreditUserCardRelationService;
+import com.pay.card.service.TaskExecutionResultService;
+import com.pay.card.utils.DateUtil;
+
+/**
+ * @ClassName: CardBillDayTask
+ * @Description: 在账单日清除上次账单的数据
+ * @author jing.jin
+ * @date 2017年12月13日
+ */
+@Component
+public class CardBillDayTask {
+    // 账单日
+    private static final String CARD_BILL_DAY = "cardBillDay";
+    private static final String LOCK_KEY = "lock";
+    // 日志
+    private static Logger logger = LoggerFactory.getLogger(CardBillDayTask.class);
+
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private CreditCardService creditCardService;
+
+    @Autowired
+    private CreditUserCardRelationService creditUserCardRelationService;
+    @Autowired
+    private TaskExecutionResultService taskExecutionResultService;
+
+    public void saveTaskResult(StatusEnum status, String exeDescription) {
+        try {
+            String host = InetAddress.getLocalHost().getHostAddress();
+            TaskExecutionResult result = new TaskExecutionResult();
+            result.setCreateDate(new Date());
+            result.setStatus(status.getStatus());
+            result.setHost(host);
+            result.setExeDescription(exeDescription);
+            result.setTaskName("CardBillDayTask");
+            taskExecutionResultService.save(result);
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    @Scheduled(cron = ("0 */30 * * * ?"))
+    // @Scheduled(cron = ("0/30 * * * * ?"))
+    public void sendBillDayMessage() {
+        boolean lock = false;
+        List<CreditCard> cardList = null;
+        try {
+
+            lock = redisTemplate.opsForValue().setIfAbsent(CARD_BILL_DAY, LOCK_KEY);
+            if (lock) {
+                CreditUserCardRelation relation = new CreditUserCardRelation();
+                // 如果在执行任务的过程中，程序突然挂了，为了避免程序因为中断而造成一直加锁的情况产生，20分钟后，key值失效，自动释放锁，
+                redisTemplate.expire(CARD_BILL_DAY, 10, TimeUnit.MINUTES);
+                LocalDate now = LocalDate.now();
+                // 账单周期
+                LocalDate beginDate = now.plusMonths(-1).plusDays(1);
+                LocalDate endDate = now;
+                // 账单日
+                int day = now.getDayOfMonth();
+                CreditCard creditCard = new CreditCard();
+                creditCard.setBillDay(String.valueOf(day));
+                cardList = creditCardService.findCreditCardListByBillDay(creditCard);
+                if (CollectionUtils.isNotEmpty(cardList)) {
+
+                    cardList.forEach(card -> {
+                        // 获取还款日
+                        // Date dueDate = card.getDueDate();
+
+                        CreditBank bank = card.getBank();
+                        LocalDate localDueDate = null;
+
+                        // 手动添加卡
+                        if (1 == card.getSource()) {
+                            relation.setCardId(card.getId());
+
+                            List<CreditUserCardRelation> relationList = creditUserCardRelationService
+                                    .findCreditUserCardRelation(relation);
+                            if (relationList != null && relationList.size() > 0) {
+                                // localDueDate =
+                                // localDueDate.plusDays(relationList.get(0).getDueDay());
+                                CreditUserCardRelation curelation = relationList.get(0);
+                                localDueDate = LocalDate.of(now.getYear(), now.getMonth(), curelation.getDueDay());
+                                if (curelation.getDueType() == 0) {
+                                    // 固定日期
+                                    if (curelation.getBillDay() > curelation.getDueDay()) {
+                                        localDueDate = localDueDate.plusMonths(1);
+                                    }
+                                } else {
+                                    // 账单日多少天后还款
+                                    localDueDate = now.plusDays(curelation.getDueDay());
+                                }
+                            }
+                        } else {
+
+                            // 导入获取卡
+                            // 获取还款日
+                            localDueDate = LocalDate.of(now.getYear(), now.getMonth(),
+                                    Integer.parseInt(card.getDueDay()));
+                            // 固定日还款
+                            if (bank.getRepaymentCycle() == 0) {
+                                // 账单日大于还款日下一月
+                                if (Integer.parseInt(card.getBillDay()) > Integer.parseInt(card.getDueDay())) {
+                                    localDueDate = localDueDate.plusMonths(1);
+                                }
+                            } else {
+                                // 账单日多少天后还款
+                                localDueDate = now.plusDays(bank.getRepaymentCycle());
+                            }
+
+                        }
+
+                        // 还款日
+                        card.setDueDay(String.valueOf(localDueDate.getDayOfMonth()));
+                        card.setDueDate(DateUtil.localDateToDate(localDueDate));
+                        // 已还款
+                        card.setRepayment(new BigDecimal(0));
+                        // 账单金额
+                        card.setBillAmount(new BigDecimal(-1));
+                        // 预借现金额度
+                        card.setCash(new BigDecimal(-1));
+                        // 已消费金额
+                        card.setConsumption(new BigDecimal(-1));
+                        // 未出账单金额
+                        card.setNotAccounted(new BigDecimal(-1));
+                        // 设置账单周期
+                        card.setBeginDate(DateUtil.localDateToDate(beginDate));
+                        card.setEndDate(DateUtil.localDateToDate(endDate));
+                        // 最低还款额
+                        card.setMinimum(new BigDecimal(-1));
+                    });
+                }
+
+                creditCardService.bathUpdateCreditCard(cardList);
+
+                saveTaskResult(StatusEnum.ENABLE, "执行个数" + (cardList == null ? 0 : cardList.size()));
+            }
+
+        } catch (Exception e) {
+            logger.error("{}", e);
+            saveTaskResult(StatusEnum.DISENABLE, "执行失败个数" + (cardList == null ? 0 : cardList.size()));
+        } finally {// 无论如何，最终都要释放锁
+
+            // if (lock) {// 如果获取了锁，则释放锁
+            redisTemplate.delete(CARD_BILL_DAY);
+            // }
+        }
+    }
+}

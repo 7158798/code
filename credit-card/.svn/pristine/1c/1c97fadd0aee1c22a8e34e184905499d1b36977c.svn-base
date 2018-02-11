@@ -1,0 +1,39 @@
+package com.pay.card.dao.impl;
+
+import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditBillDetailDao;
+import com.pay.card.model.CreditBillDetail;
+
+@Service
+public class CreditBillDetailDaoImpl implements CreditBillDetailDao {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Override
+    public int findBillDatailCount(Long billId, String yearMonth) {
+        int count = 0;
+        String hql = "select count(*) from credit_bill_detail_" + yearMonth + " where bill_id = ?";
+        List<Integer> list = jdbcTemplate.queryForList(hql, Integer.class, new Object[] { billId });
+        if (CollectionUtils.isNotEmpty(list)) {
+            return list.get(0);
+        }
+        return count;
+    }
+
+    @Override
+    public List<CreditBillDetail> findBillDetailList(Long billId, Long userId, String yearMonth) {
+
+        String hql = "select * from credit_bill_detail_" + yearMonth + " where bill_id = ? and user_id =?";
+        List<CreditBillDetail> list = jdbcTemplate.query(hql, new Object[] { billId, userId },
+                        new BeanPropertyRowMapper<CreditBillDetail>(CreditBillDetail.class));
+        return list;
+    }
+}

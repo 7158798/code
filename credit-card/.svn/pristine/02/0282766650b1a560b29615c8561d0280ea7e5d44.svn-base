@@ -1,0 +1,18 @@
+environment=dev
+
+server.port=8080
+server.context-path=/credit-card
+
+pay.datasource.dsname=
+pay.datasource.driver-class-name = com.mysql.jdbc.Driver
+pay.datasource.url = jdbc:mysql://172.28.7.4:3306/bill?autoReconnect=true&useUnicode=true&characterEncoding=utf8
+pay.datasource.username=root
+pay.datasource.password=123456
+
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+spring.jpa.show-sql=true
+spring.jpa.hibernate.ddl-auto=validate
+spring.datasource.initialize=true
+spring.datasource.sqlScriptEncoding=UTF-8
+
+spring.session.store-type=none

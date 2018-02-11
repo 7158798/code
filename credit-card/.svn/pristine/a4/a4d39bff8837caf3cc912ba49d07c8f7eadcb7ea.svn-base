@@ -1,0 +1,8 @@
+package com.pay.card.service;
+
+import java.util.List;
+import java.util.Map;
+
+public interface CreditFileService {
+    public List<Map<String, Object>> findCreditFileList(Integer page);
+}

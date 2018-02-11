@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditUserEmailRelationMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditUserEmailRelation">
+		<id column="id" property="id" />
+		<result column="user_id" property="userId" />
+		<result column="eamil_id" property="eamilId" />
+        <result column="server" property="server" />
+        <result column="port" property="port" />
+        <result column="ssl" property="ssl" />
+        <result column="protocol" property="protocol" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id as userId, eamil_id as eamilId,server,port,ssl,protocol
+    </sql>
+    <select id="findEmailByUser"  resultType="com.pay.aile.bill.entity.CreditEmail" parameterType="String" >
+      select e.id,e.email,e.password from credit_email e inner join credit_user_email_relation er on e.id = er.email_id where er.user_id=#{userId} 
+   
+    </select>
+    
+    
+    <update id="updateStatus" parameterType="com.pay.aile.bill.entity.CreditEmail">
+      update credit_user_email_relation  set  status=1 where user_id=#{userId} and email_id=#{emailId}  
+   </update>
+   <update id="updateCardStatus" parameterType="com.pay.aile.bill.entity.CreditEmail">
+     update credit_user_card_relation set `status`=1 where user_Id=#{userId} and exists (select c.id from credit_card c where c.email=#{email} and c.id = card_Id)
+   </update>
+   <update id="updateBillStatus" parameterType="com.pay.aile.bill.entity.CreditEmail">
+     update credit_user_bill_relation set `status`=1 where user_Id=#{userId} and exists (select b.id from credit_bill b where b.email=#{email}  and b.id = bill_Id)
+
+   </update>
+</mapper>

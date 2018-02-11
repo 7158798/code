@@ -1,0 +1,526 @@
+package com.pay.card.view;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.Date;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
+
+import com.pay.card.model.CreditCard;
+import com.pay.card.utils.AmountUtil;
+import com.pay.card.utils.DateUtil;
+import com.pay.card.web.context.CardBuildContext;
+
+/**
+ * @ClassName: CreditCardView
+ * @Description:信用卡视图
+ * @author jinjing
+ * @date 2017年11月15日
+ */
+public class CreditCardView {
+    private static Logger logger = LoggerFactory.getLogger(CreditCardView.class);
+    private final CreditCard creditCard;
+
+    private final CardBuildContext buildContext;
+
+    public String lastUpdatTime;
+
+    public String year;
+
+    public String month;
+
+    public CreditCardView(CreditCard card, CardBuildContext buildContext) {
+        creditCard = card;
+        this.buildContext = buildContext;
+    }
+
+    /**
+     * @Title: getBankCode
+     * @Description: 银行编码
+     * @param
+     * @return
+     */
+    public String getBankCode() {
+        if (creditCard.getBank() != null) {
+            return creditCard.getBank().getCode();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getBankName @Description:银行名称 @return String @throws
+     */
+    public String getBankName() {
+        if (creditCard.getBank() != null) {
+            return creditCard.getBank().getName();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getBankShortName
+     * @Description:银行简称
+     * @return String 返回类型 @throws
+     */
+    public String getBankShortName() {
+        if (creditCard.getBank() != null) {
+            return creditCard.getBank().getShortName();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getBillAmount
+     * @Description:账单金额
+     * @return BigDecimal 返回类型 @throws
+     */
+    public String getBillAmount() {
+        if (creditCard.getBillAmount() != null) {
+            return AmountUtil.amountFormat(creditCard.getBillAmount());
+        }
+        return "";
+    }
+
+    public String getBillButton() {
+        String note = "立即还款";
+        LocalDate nowDate = LocalDate.now();
+        Date now = DateUtil.localDateToDate(nowDate);
+        Date dueDate = creditCard.getDueDate();
+        int day = nowDate.getDayOfMonth();
+        int billDay = Integer.parseInt(creditCard.getBillDay());
+        if (dueDate == null || creditCard.getBillDay() == null) {
+            return note;
+        }
+        // 首先得判断逾期
+        // long d = DateUtil.getdifferenceDay(creditCard.getDueDate(), now);
+        // 过了还款日
+        if (now.after(dueDate)) {
+            if (creditCard.getRepayment() != null && creditCard.getBillAmount() != null
+                    && creditCard.getRepayment().doubleValue() >= creditCard.getBillAmount().doubleValue()) {
+                note = "全部还清";
+            } else if (creditCard.getRepayment() != null && creditCard.getMinimum() != null
+                    && creditCard.getRepayment().doubleValue() >= creditCard.getMinimum().doubleValue()) {
+                note = "上月已还最低";
+            } else {
+                note = "立即还款";
+            }
+        } else if (billDay < day) {
+            if (creditCard.getRepayment() != null && creditCard.getRepayment().doubleValue() > 0) {
+                note = "继续还款";
+            } else {
+                note = "立即还款";
+            }
+
+        }
+
+        return note;
+    }
+
+    /**
+     * @Title: getBillCycle
+     * @Description: 账单周期
+     * @param
+     * @return
+     */
+    public String getBillCycle() {
+
+        String b = "";
+        if (creditCard.getBeginDate() != null) {
+            b = DateUtil.formatMMDD(creditCard.getBeginDate());
+        }
+        String e = "";
+        if (creditCard.getEndDate() != null) {
+            e = DateUtil.formatMMDD(creditCard.getEndDate());
+        }
+        return b + "-" + e;
+    }
+
+    /**
+     * @Title: getBillDay
+     * @Description:
+     * @return Integer 返回类型 @throws
+     */
+    public Integer getBillDay() {
+        return creditCard.getBillDay() == null ? 0 : Integer.parseInt(creditCard.getBillDay());
+        // return
+        // com.pay.card.utils.DateUtil.getBillDay(creditCard.getBillDay());
+
+    }
+
+    public String getBillNote() {
+        String note = "";
+        LocalDate nowDate = LocalDate.now();
+        Date now = DateUtil.localDateToDate(nowDate);
+        int day = nowDate.getDayOfMonth();
+        int billDay = Integer.parseInt(creditCard.getBillDay());
+
+        // TODO 修改creditCard.getDueDate()
+        Date dueDate = creditCard.getDueDate();
+        if (dueDate == null) {
+            dueDate = new Date();
+        }
+
+        // 首先得判断逾期
+        long d = DateUtil.getdifferenceDay(now, dueDate);
+        if (creditCard.getMinimum().doubleValue() != -1
+                && creditCard.getMinimum().doubleValue() > creditCard.getRepayment().doubleValue() && d > 0 && d <= 3) {
+            // 显示逾期
+            note = String.format("已逾期%d天", d);
+        } else if (billDay < day) {
+            // 过了账单日
+            if (dueDate.equals(now)) {
+                note = "今日还款";
+            } else if (now.before(dueDate)) {
+                Period between = Period.between(nowDate, DateUtil.dateToLocalDate(dueDate));
+                note = String.format("%d天后还款", between.getDays());
+            } else {
+                Period between = Period.between(nowDate,
+                        DateUtil.dateToLocalDate(creditCard.getEndDate()).plusMonths(1));
+                note = String.format("%d天后出账单", between.getDays());
+            }
+
+        } else {
+            Period between = Period.between(nowDate, DateUtil.dateToLocalDate(creditCard.getEndDate()).plusMonths(1));
+            note = String.format("%d天后出账单", between.getDays());
+        }
+
+        return note;
+    }
+
+    /**
+     * @Title: getCardholder
+     * @Description:持卡人
+     * @return String 返回类型 @throws
+     */
+    public String getCardholder() {
+        if (StringUtils.hasText(creditCard.getCardholder())) {
+            return creditCard.getCardholder();
+        }
+        return "";
+    }
+
+    public String getCardNote() {
+
+        String note = "";
+        LocalDate nowDate = LocalDate.now();
+        Date now = DateUtil.localDateToDate(nowDate);
+        int day = nowDate.getDayOfMonth();
+        int billDay = Integer.parseInt(creditCard.getBillDay());
+
+        // TODO 修改creditCard.getDueDate()
+        Date dueDate = creditCard.getDueDate();
+        if (dueDate == null) {
+            dueDate = new Date();
+        }
+
+        // 首先得判断逾期
+        long d = DateUtil.getdifferenceDay(now, dueDate);
+        if (creditCard.getMinimum().doubleValue() != -1
+                && creditCard.getMinimum().doubleValue() > creditCard.getRepayment().doubleValue() && d > 0 && d <= 3) {
+            // 显示逾期
+            note = String.format("已逾期%d天", d);
+        } else if (billDay < day) {
+            // 过了账单日
+            if (dueDate.equals(now)) {
+                note = "今日还款";
+            } else if (now.before(dueDate)) {
+
+                // 过了账单日
+                // 今天是还款日
+
+                if (creditCard.getRepayment() != null && creditCard.getBillAmount() != null
+                        && creditCard.getRepayment().doubleValue() >= creditCard.getBillAmount().doubleValue()) {
+                    note = "全部还清";
+                } else if (creditCard.getRepayment() != null && creditCard.getMinimum() != null
+                        && creditCard.getRepayment().doubleValue() >= creditCard.getMinimum().doubleValue()) {
+                    note = "已还最低";
+                } else {
+                    Period between = Period.between(nowDate, DateUtil.dateToLocalDate(dueDate));
+                    note = String.format("%d天后还款", between.getDays());
+                }
+
+            } else {
+                Period between = Period.between(nowDate,
+                        DateUtil.dateToLocalDate(creditCard.getEndDate()).plusMonths(1));
+                note = String.format("%d天后出账单", between.getDays());
+            }
+
+        } else {
+            Period between = Period.between(nowDate, DateUtil.dateToLocalDate(creditCard.getEndDate()).plusMonths(1));
+            note = String.format("%d天后出账单", between.getDays());
+        }
+
+        return note;
+    }
+
+    /**
+     * @Title: getConsumption
+     * @Description:未出账单金额
+     * @return BigDecimal 返回类型 @throws
+     */
+    public String getConsumption() {
+        if (creditCard.getConsumption() != null) {
+            return AmountUtil.amountFormat(creditCard.getConsumption());
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getCredits
+     * @Description:信用卡额度
+     * @return BigDecimal 返回类型 @throws
+     */
+    public String getCredits() {
+        if (creditCard.getCredits() != null) {
+            return AmountUtil.amountFormat(creditCard.getCredits());
+        }
+        return "";
+
+    }
+
+    public Date getDueDate() {
+
+        return creditCard.getDueDate();
+    }
+
+    /**
+     * @Title: getDueDay
+     * @Description:获取还款时间
+     * @return Long 返回类型 @throws
+     */
+    public String getDueDay() {
+        if (creditCard.getDueDate() != null) {
+            // TODO 修改creditCard.getDueDate()
+            return com.pay.card.utils.DateUtil
+                    .getDueDay(creditCard.getDueDate() == null ? new Date() : creditCard.getDueDate()) + "";
+        }
+        return "";
+    }
+
+    public Integer getDueType() {
+        if (creditCard.getUserCardRelation() == null) {
+            return 0;
+        } else {
+            return creditCard.getUserCardRelation().getDueType();
+        }
+
+    }
+
+    /**
+     * @Title: getFreeInterestPeriod
+     * @Description: 获取免息期
+     * @return Long 返回类型 @throws
+     */
+    public Long getFreeInterestPeriod() {
+        try {
+            long freeInterestPeriod = 0;
+            if (creditCard.getUserCardRelation() != null) {
+                // 固定
+                if (creditCard.getUserCardRelation().getDueType() == 0) {
+                    freeInterestPeriod = DateUtil.getFreeInterestPeriod(creditCard.getUserCardRelation().getBillDay(),
+                            creditCard.getUserCardRelation().getDueDay(), 0);
+                } else {
+                    // 不固定
+                    freeInterestPeriod = DateUtil.getFreeInterestPeriod(creditCard.getUserCardRelation().getBillDay(),
+                            creditCard.getUserCardRelation().getDueDay(), creditCard.getUserCardRelation().getDueDay());
+                }
+            }
+            freeInterestPeriod = DateUtil.getFreeInterestPeriod(Integer.parseInt(creditCard.getBillDay()),
+                    Integer.parseInt(creditCard.getDueDay()), creditCard.getBank().getRepaymentCycle());
+            return freeInterestPeriod;
+
+        } catch (Exception e) {
+            logger.info(e.getMessage());
+        }
+        return 0L;
+    }
+
+    /**
+     * @Title: getFullNumbers
+     * @Description: 获取完整卡号
+     * @param
+     * @return
+     */
+    public String getFullNumbers() {
+        if (StringUtils.hasText(creditCard.getNumbers()) && creditCard.getSource() == 1) {
+            return creditCard.getNumbers().split("_")[1];
+        }
+        return "";
+    }
+
+    public Long getId() {
+        return creditCard.getId();
+    }
+
+    /**
+     * @Title: getIntegral
+     * @Description: 积分
+     * @return BigDecimal 返回类型 @throws
+     */
+    public String getIntegral() {
+        if (creditCard.getIntegral() != null) {
+            return creditCard.getIntegral() + "";
+        }
+        return "";
+
+    }
+
+    public Integer getIsNew() {
+
+        return 0;
+    }
+
+    /**
+     * @Title: getLastUpdatTime
+     * @Description:最后更新时间
+     * @return String 返回类型 @throws
+     */
+    public String getLastUpdatTime() {
+
+        return lastUpdatTime;
+    }
+
+    /**
+     * @Title: getNextBillDays
+     * @Description: 还有n天出账单
+     * @param
+     * @return
+     */
+    // public String getNextBillDays() {
+    // LocalDate today = LocalDate.now();
+    // LocalDate lastDay = today.with(TemporalAdjusters.lastDayOfMonth());
+    // Period p = Period.between(today, lastDay);
+    // if (StringUtils.hasText(creditCard.getBillDay())) {
+    // return p.getDays() + Integer.valueOf(creditCard.getBillDay()) + "";
+    // }
+    // return null;
+    // }
+    /**
+     * @Title: getMinimum @Description: 最低还款额 @param @return 参数 @return String
+     *         返回类型 @throws
+     */
+    public String getMinimum() {
+        if (creditCard.getMinimum() != null && creditCard.getRepayment() != null) {
+            BigDecimal minimum = creditCard.getMinimum().subtract(creditCard.getRepayment());
+            if (minimum.doubleValue() < 0) {
+                return "-1";
+            } else {
+                return AmountUtil.amountFormat(minimum);
+            }
+
+        }
+        return "0";
+    }
+
+    public String getMonth() {
+        return month;
+    }
+
+    public String getName() {
+        if (StringUtils.hasText(creditCard.getName())) {
+            return creditCard.getName();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getNumbers
+     * @Description:银行卡号
+     * @return String @throws
+     */
+    public String getNumbers() {
+        String numbers = creditCard.getNumbers();
+        if (numbers != null && numbers.length() > 4) {
+            numbers = numbers.substring(numbers.length() - 4, numbers.length());
+            return numbers;
+        }
+        return numbers;
+    }
+
+    /**
+     * @Title: getPhoneNo
+     * @Description: 手机号
+     * @param
+     * @return String @throws
+     */
+    public String getPhoneNo() {
+        if (StringUtils.hasText(creditCard.getPhoneNo())) {
+            return creditCard.getPhoneNo();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getRemainingAmount
+     * @Description:剩余应还金额
+     * @return String @throws
+     */
+    public String getRemainingAmount() {
+        if (creditCard.getBillAmount() != null && creditCard.getRepayment() != null) {
+            return AmountUtil.amountFormat(creditCard.getBillAmount().subtract(creditCard.getRepayment()));
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getRemainingCredits
+     * @Description: 剩余额度
+     * @param
+     * @return String @throws
+     */
+    public String getRemainingCredits() {
+        if (creditCard.getCredits() == new BigDecimal(-1)) {
+            return creditCard.getCredits().toString();
+        } else {
+            if (creditCard.getCredits() != null && creditCard.getBillAmount() != null
+                    && creditCard.getRepayment() != null) {
+                return AmountUtil.amountFormat(
+                        creditCard.getCredits().subtract(creditCard.getBillAmount()).add(creditCard.getRepayment()));
+            }
+            return "";
+        }
+    }
+
+    /**
+     * @Title: getRepayment
+     * @Description: 已还款额
+     * @param
+     * @return
+     */
+    public String getRepayment() {
+        if (creditCard.getRepayment() != null) {
+            return AmountUtil.amountFormat(creditCard.getRepayment());
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getSource
+     * @Description: 还款类型
+     * @param
+     * @return
+     */
+    public Integer getSource() {
+        return creditCard.getSource();
+    }
+
+    public String getYear() {
+        return year;
+    }
+
+    public void setLastUpdatTime(String lastUpdatTime) {
+        this.lastUpdatTime = lastUpdatTime;
+    }
+
+    public void setMonth(String month) {
+        this.month = month;
+    }
+
+    public void setYear(String year) {
+        this.year = year;
+    }
+
+}

@@ -1,0 +1,843 @@
+package com.pay.aile.bill.analyze.banktemplate;
+
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.data.util.ReflectionUtils;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.analyze.BankMailAnalyzerTemplate;
+import com.pay.aile.bill.analyze.MailContentExtractor;
+import com.pay.aile.bill.config.TemplateCache;
+import com.pay.aile.bill.contant.Constant;
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditBillDetailRelation;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.entity.CreditUserBillRelation;
+import com.pay.aile.bill.entity.CreditUserCardRelation;
+import com.pay.aile.bill.entity.CreditUserEmailRelation;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.exception.AnalyzeBillException;
+import com.pay.aile.bill.mapper.CreditUserBillRelationMapper;
+import com.pay.aile.bill.mapper.CreditUserCardRelationMapper;
+import com.pay.aile.bill.mapper.CreditUserEmailRelationMapper;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.model.AnalyzeResult;
+import com.pay.aile.bill.service.CreditBillDetailRelationService;
+import com.pay.aile.bill.service.CreditBillDetailService;
+import com.pay.aile.bill.service.CreditBillService;
+import com.pay.aile.bill.service.CreditCardService;
+import com.pay.aile.bill.utils.DateUtil;
+import com.pay.aile.bill.utils.PatternMatcherUtil;
+
+/**
+ *
+ * @author Charlie
+ * @description 卡种解析基础模板
+ *
+ *              可解决多账户统一还款的账单解析
+ *
+ *              可解决多账户分开还款的账单部分内容的解析
+ *
+ *              多账户统一还款:应还金额等合计在一起,消费明细可能有多张卡的明细,从明细中选取消费数量最多的卡作为此账户的卡号保存
+ *              一封邮件只能解析一个卡号、一个账单
+ *
+ *              多账户分开还款:应还款额、额度等是分开显示的，即一个账单中可以抓抓取多个卡号和账单
+ *              1.消费明细不能区分是属于哪张卡的,那么所有的消费明细,属于所有的卡和账单
+ *              2.消费明细能区分属于哪张卡,那么要将消费明细与其所属卡关联
+ */
+public abstract class BaseBankTemplate implements BankMailAnalyzerTemplate, InitializingBean {
+    @Resource(name = "textExtractor")
+    protected MailContentExtractor extractor;
+    /**
+     * 统计每一种模板的调用次数 用于不同卡种之间的排序,调用次数高的排位靠前
+     */
+    private int count;
+    private Logger logger = LoggerFactory.getLogger(getClass());
+    /**
+     * 信用卡类型 由子类去初始化自己是什么信用卡类型
+     */
+    protected CardTypeEnum cardType;
+
+    @Resource
+    protected CreditBillDetailService creditBillDetailService;
+
+    @Resource
+    protected CreditBillService creditBillService;
+
+    @Resource
+    protected CreditCardService creditCardService;
+
+    @Resource
+    protected CreditBillDetailRelationService creditBillDetailRelationService;
+
+    @Resource
+    protected CreditUserEmailRelationMapper userEmailRelationMapper;
+
+    @Resource
+    protected CreditUserBillRelationMapper userBillRelationMapper;
+
+    @Resource
+    protected CreditUserCardRelationMapper userCardRelationMapper;
+    /**
+     * 存放明细规则的map
+     */
+    protected Map<Integer, String> detailMap = new HashMap<Integer, String>();
+    /**
+     * 模板解析邮件时需要的关键字及对应的规则 key:到期还款日/应还款金额.eg value:规则 根据银行和信用卡类型,从缓存中初始化
+     */
+    protected CreditTemplate rules;
+
+    /**
+     * 默认的分隔符-空格
+     */
+    protected String defaultSplitSign = " ";
+
+    /**
+     * 默认的对账单明细中进行去空格等格式化处理的标签
+     */
+    protected String defaultExtractTag = "td";
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        setCardType();
+    }
+
+    @Override
+    public void analyze(AnalyzeParamsModel apm) throws AnalyzeBillException {
+        count++;
+        apm.setCardCode(cardType.getCardCode());
+        initRules();
+        if (rules != null) {
+            apm.setCardtypeId(rules.getCardtypeId());
+        }
+        initDetail();
+        extractBillContent(apm);
+        beforeAnalyze(apm);
+        analyzeInternal(apm);
+        checkCardAndBill(apm);
+        afterAnalyze(apm);
+    }
+
+    /**
+     * 用于不同卡种之间的排序,调用次数高的排位靠前
+     */
+    @Override
+    public int compareTo(BankMailAnalyzerTemplate o) {
+        if (o == null) {
+            return 1;
+        }
+        BaseBankTemplate other = (BaseBankTemplate) o;
+        int otherCount = other.count;
+        return count > otherCount ? 1 : -1;
+    }
+
+    public CardTypeEnum getCardType() {
+        return cardType;
+    }
+
+    @Override
+    public void handleResult(AnalyzeParamsModel apm) {
+        handleResultInternal(apm);
+    }
+
+    /**
+     * 信用卡中添加还款日以及账单金额（本期或上期账单） 1、今天在本期还款周期内（本期）则写入本期账单金额
+     * 2、今天在上期还款日后，本期账单日前，则写入上期账单，非上期则不写
+     *
+     * @param card
+     * @param bill
+     * @param apm
+     */
+    private void addDueBillAmount(CreditCard card, CreditBill bill, AnalyzeParamsModel apm) {
+        // 获得今天最小时间
+        Date date = DateUtil.getMinTime(new Date());
+        // 判断账单日、还款日、还款金额不能为空
+        if (StringUtils.isEmpty(card.getBillDay()) || bill.getDueDate() == null || bill.getCurrentAmount() == null) {
+            logger.info("addDueBillAmount 账单日、还款日、还款金额为空 cardNo/email:{}/{}", card.getNumbers(), apm.getEmail());
+            return;
+        }
+        // 判断今天是否过了账单中的还款日期
+        if (date.compareTo(bill.getDueDate()) <= 0) {// 本月还款周期内
+            String dueDay = DateUtil.getDateField(bill.getDueDate(), Calendar.DAY_OF_MONTH);
+            card.setDueDate(bill.getDueDate());
+            card.setDueDay(dueDay);
+            card.setBillAmount(bill.getCurrentAmount());
+            logger.info("addDueBillAmount 本期账单 cardNo/email/billAmount/dueDate:{}/{}/{}/{}", card.getNumbers(),
+                    apm.getEmail(), bill.getCurrentAmount(), DateUtil.formatDate(bill.getDueDate()));
+            return;
+        }
+        logger.info("addDueBillAmount 非本期账单 cardNo/email:{}/{}", card.getNumbers(), apm.getEmail());
+        // 非本月还款周期即上月账单，判断是否到本月账单日，没到本月账单日则写入上月数据，到本月账单日则不写数据等待抓取本月账单
+        // 获取本月账单日
+        Date billDate = DateUtil.getMonthDay(date, Integer.parseInt(card.getBillDay()));
+        if (date.compareTo(billDate) >= 0) {// 到了本月账单日，则不写本条数据
+            logger.info("addDueBillAmount 已到本月账单日 cardNo/email:{}/{}", card.getNumbers(), apm.getEmail());
+            return;
+        }
+        // 未到本月账单日，写入上月数据
+        // 计算上个月的账单日，如果当前还款日在这个月和上个月账单日之间，则还款日为上个月还款日
+        Date lastBillDate = DateUtil.getLastMonth(billDate);
+        if (DateUtil.isInDateRange(bill.getDueDate(), lastBillDate, billDate)) {
+            String dueDay = DateUtil.getDateField(bill.getDueDate(), Calendar.DAY_OF_MONTH);
+            card.setDueDate(bill.getDueDate());
+            card.setDueDay(dueDay);
+            card.setBillAmount(bill.getCurrentAmount());
+            logger.info("addDueBillAmount 写入上期账单 cardNo/email/billAmount/dueDate:{}/{}/{}/{}", card.getNumbers(),
+                    apm.getEmail(), bill.getCurrentAmount(), DateUtil.formatDate(bill.getDueDate()));
+            return;
+        }
+        logger.info("addDueBillAmount end 非本期非上期账单 cardNo/email:{}/{}", card.getNumbers(), apm.getEmail());
+    }
+
+    /**
+     *
+     * @param apm
+     * @throws AnalyzeBillException
+     */
+    protected void afterAnalyze(AnalyzeParamsModel apm) throws AnalyzeBillException {
+
+    }
+
+    protected void analyzeBillDate(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getBillDay())) {
+            String billDay = getValueByPattern("billDay", content, rules.getBillDay(), apm, " ");
+            if (StringUtils.hasText(billDay)) {
+                billDay = billDay.replaceAll("年", "").replaceAll("月", "").replaceAll("日", "").replaceAll("\\s+", "");
+                final String finalBillDay = billDay.substring(billDay.length() - 2);
+                cardList.forEach(card -> {
+                    card.setBillDay(finalBillDay);
+                });
+            }
+        }
+    }
+
+    /**
+     *
+     * @Title: analyzeDueDate
+     * @Description: 解析参数
+     * @param card
+     * @param content
+     * @param apm
+     * @return void 返回类型 @throws
+     */
+    protected void analyzeCardholder(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCardholder())) {
+            String cardholder = getValueByPattern("cardholder", content, rules.getCardholder(), apm, "");
+            final String finalCardholder = cardholder.replaceAll("尊敬的", "").replaceAll("先生", "").replaceAll("女士", "")
+                    .replaceAll("您好", "");
+            cardList.forEach(card -> {
+                card.setCardholder(finalCardholder);
+            });
+        }
+    }
+
+    protected void analyzeCardNo(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCardNumbers())) {
+            Exception error = null;
+            try {
+                Integer.valueOf(rules.getCardNumbers());
+            } catch (Exception e) {
+                error = e;
+            }
+            if (error != null) {
+                List<String> cardNos = getValueListByPattern("cardNumbers", content, rules.getCardNumbers(), "");
+                if (!cardNos.isEmpty()) {
+                    for (int i = 0; i < cardNos.size(); i++) {
+                        String cardNo = cardNos.get(i);
+                        cardNo = StringUtils
+                                .collectionToDelimitedString(PatternMatcherUtil.getMatcher("\\d+|\\*+|-", cardNo), "");
+                        CreditCard card = new CreditCard();
+                        card.setNumbers(cardNo);
+                        if (!cardList.contains(card)) {
+                            cardList.add(card);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     * @Title: analyzeCash
+     * @Description:预借现金
+     * @param bill
+     * @param content
+     * @param apm
+     * @return void 返回类型 @throws
+     */
+    protected void analyzeCash(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCash())) {
+            List<String> cash = getValueListByPattern("cash", content, rules.getCash(), " ");
+            cash = PatternMatcherUtil.getMatcher(Constant.pattern_amount, cash);
+            if (!cash.isEmpty()) {
+                for (int i = 0; i < cash.size(); i++) {
+                    CreditBill bill = billList.get(i);
+                    bill.setCash(new BigDecimal(cash.get(i)));
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     * @Title: analyzeCredits
+     * @Description: 信用额度
+     * @param bill
+     * @param content
+     * @param apm
+     * @return void 返回类型 @throws
+     */
+    protected void analyzeCredits(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCredits())) {
+            List<String> credits = getValueListByPattern("credits", content, rules.getCredits(), " ");
+            credits = PatternMatcherUtil.getMatcher(Constant.pattern_amount, credits);
+            if (!credits.isEmpty()) {
+                for (int i = 0; i < credits.size(); i++) {
+                    CreditBill bill = billList.get(i);
+                    bill.setCredits(new BigDecimal(credits.get(i)));
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     * @Title: analyzeCurrentAmount
+     * @Description: 应还款额
+     * @param bill
+     * @param content
+     * @param apm
+     * @return void 返回类型 @throws
+     */
+    protected void analyzeCurrentAmount(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCurrentAmount())) {
+            List<String> currentAmountList = getValueListByPattern("currentAmount", content, rules.getCurrentAmount(),
+                    defaultSplitSign);
+            currentAmountList = PatternMatcherUtil.getMatcher(Constant.pattern_amount, currentAmountList);
+            if (!currentAmountList.isEmpty()) {
+                currentAmountList.stream().map(item -> {
+                    if (item.startsWith("-")) {
+                        return item.replaceAll("-", "");
+                    } else {
+                        return item;
+                    }
+                }).forEach(currentAmount -> {
+                    CreditBill bill = new CreditBill();
+                    bill.setCurrentAmount(new BigDecimal(currentAmount));
+                    billList.add(bill);
+                });
+            }
+        }
+    }
+
+    protected void analyzeCycle(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCycle())) {
+
+            String cycle = getValueByPattern("cycle", content, rules.getCycle(), apm, defaultSplitSign);
+            String[] sa = cycle.split("-");
+            billList.forEach(bill -> {
+                bill.setBeginDate(DateUtil.parseDate(sa[0]));
+                bill.setEndDate(DateUtil.parseDate(sa[1]));
+            });
+        }
+    }
+
+    protected void analyzeDetails(List<CreditBillDetail> detailList, String content, AnalyzeParamsModel apm,
+            List<CreditCard> cardList) {
+        List<String> list = null;
+        if (StringUtils.hasText(rules.getDetails())) {
+            // 交易明细
+            list = PatternMatcherUtil.getMatcher(rules.getDetails(), content);
+            if (!list.isEmpty()) {
+                for (int i = 0; i < list.size(); i++) {
+                    String s = list.get(i);
+                    detailList.add(setCreditBillDetail(s));
+                    setCardNumbers(cardList, s);
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     * @Title: analyzeDueDate
+     * @Description: 还款日
+     * @param bill
+     * @param content
+     * @param apm
+     * @return void 返回类型 @throws
+     */
+    protected void analyzeDueDate(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getDueDate())) {
+            String date = getValueByPattern("dueDate", content, rules.getDueDate(), apm, defaultSplitSign);
+            billList.forEach(bill -> {
+                bill.setDueDate(DateUtil.parseDate(date));
+            });
+
+        }
+    }
+
+    /**
+     * @Description: 积分余额
+     * @param card
+     * @param content
+     * @param apm
+     */
+    protected void analyzeIntegral(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getIntegral())) {
+            String integral = getValueByPattern("integral", content, rules.getIntegral(), apm, " ");
+            final String finalIntegral = PatternMatcherUtil.getMatcherString("\\d+\\.?\\d*", integral);
+            if (StringUtils.hasText(finalIntegral)) {
+                cardList.forEach(card -> {
+                    card.setIntegral(new BigDecimal(finalIntegral));
+                });
+            }
+        }
+    }
+
+    protected void analyzeInternal(AnalyzeParamsModel apm) throws AnalyzeBillException {
+        logger.info("账单内容：{}", apm.toString());
+        String content = apm.getContent();
+        AnalyzeResult ar = new AnalyzeResult();
+        // ka
+        List<CreditCard> cardList = ar.getCardList();
+        // 账单
+        List<CreditBill> billList = ar.getBillList();
+
+        List<CreditBillDetail> detailList = ar.getDetailList();
+        if (rules == null) {
+            throw new AnalyzeBillException("账单模板规则未初始化");
+        }
+
+        // 本期账单金额
+        analyzeCurrentAmount(billList, content, apm);
+        // 最低还款额
+        analyzeMinimum(billList, content, apm);
+        // 卡号
+        analyzeCardNo(cardList, content, apm);
+        // 账单周期
+        analyzeCycle(billList, content, apm);
+        // 年月
+        analyzeYearMonth(billList, content, apm);
+        // 还款日
+        analyzeDueDate(billList, content, apm);
+        // 信用额度
+        analyzeCredits(billList, content, apm);
+        // 取取现金额
+        analyzeCash(billList, content, apm);
+        // 消费明细
+        analyzeDetails(detailList, content, apm, cardList);
+        // 持卡人
+        analyzeCardholder(cardList, content, apm);
+        // 账单日
+        analyzeBillDate(cardList, content, apm);
+        // 积分余额
+        analyzeIntegral(cardList, content, apm);
+        // 设置卡片
+        setCard(cardList, billList, apm);
+        apm.setResult(ar);
+    }
+
+    protected void analyzeMinimum(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getMinimum())) {
+            List<String> minimumList = getValueListByPattern("minimum", content, rules.getMinimum(), defaultSplitSign);
+            minimumList = PatternMatcherUtil.getMatcher(Constant.pattern_amount, minimumList);
+            if (!minimumList.isEmpty()) {
+                minimumList = minimumList.stream().map(item -> {
+                    if (item.startsWith("-")) {
+                        return item.replaceAll("-", "");
+                    } else {
+                        return item;
+                    }
+                }).collect(Collectors.toList());
+                for (int i = 0; i < minimumList.size(); i++) {
+                    CreditBill bill = null;
+                    if (!billList.isEmpty()) {
+                        bill = billList.get(i);
+                    } else {
+                        bill = new CreditBill();
+                        billList.add(bill);
+                    }
+                    bill.setMinimum(new BigDecimal(minimumList.get(i)));
+                }
+            }
+        }
+    }
+
+    protected void analyzeYearMonth(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getYearMonth())) {
+            String yearMonth = getValueByPattern("yearMonth", content, rules.getYearMonth(), apm, "");
+            yearMonth = StringUtils.collectionToDelimitedString(PatternMatcherUtil.getMatcher("\\d+", yearMonth), "");
+            // yearMonth = yearMonth.replaceAll("年|月|-|/", "");
+            yearMonth = PatternMatcherUtil.getMatcherString("\\d{6}", yearMonth);
+            if (StringUtils.hasText(yearMonth)) {
+                String year = yearMonth.substring(0, 4);
+                String month = yearMonth.substring(4);
+                billList.forEach(bill -> {
+                    bill.setYear(year);
+                    bill.setMonth(month);
+                });
+            }
+        } else {
+            billList.forEach(bill -> {
+                if (bill.getEndDate() != null) {
+                    bill.setYear(DateUtil.getDateField(bill.getEndDate(), Calendar.YEAR));
+                    bill.setMonth(DateUtil.getDateField(bill.getEndDate(), Calendar.MONTH));
+                }
+            });
+        }
+    }
+
+    /**
+     *
+     * @param apm
+     */
+    protected void beforeAnalyze(AnalyzeParamsModel apm) {
+    }
+
+    /**
+     *
+     * @throws AnalyzeBillException
+     * @Title: checkCardAndBill @Description: 检查数据合法性 @param apm @return void
+     *         返回类型 @throws
+     */
+    protected void checkCardAndBill(AnalyzeParamsModel apm) throws AnalyzeBillException {
+        if (apm.getResult().getCardList().isEmpty()) {
+            throw new AnalyzeBillException("未抓取到卡号");
+        }
+        if (apm.getResult().getBillList().isEmpty()) {
+            throw new AnalyzeBillException("未抓取到账单");
+        }
+        // 检查是否包含卡号和持卡人
+        for (CreditCard card : apm.getResult().getCardList()) {
+            if (!StringUtils.hasText(card.getNumbers())) {
+                throw new AnalyzeBillException("无法获取卡号");
+            }
+        }
+        for (CreditBill bill : apm.getResult().getBillList()) {
+            if (bill.getDueDate() == null || bill.getCurrentAmount() == null) {
+                throw new AnalyzeBillException("应还款日期和应还款额都为空!");
+            }
+        }
+    }
+
+    /**
+     *
+     * @Title: extractBillContent @Description: 初始化需要解析的内容 @param @param apm
+     *         参数 @return void 返回类型 @throws
+     */
+    protected void extractBillContent(AnalyzeParamsModel apm) {
+        String content = extractor.extract(apm.getOriginContent(), defaultExtractTag);
+        apm.setContent(content);
+    }
+
+    protected String getValueByPattern(String key, String content, String ruleValue, AnalyzeParamsModel apm,
+            String splitSign) {
+
+        if (StringUtils.hasText(ruleValue)) {
+
+            List<String> list = PatternMatcherUtil.getMatcher(ruleValue, content);
+            if (list.isEmpty()) {
+                // handleNotMatch(key, rules.getDueDate(), apm);
+                return "";
+            }
+            String result = list.get(0);
+            if ("".equals(splitSign)) {
+                return result;
+            } else {
+                String[] sa = result.split(splitSign);
+                String value = sa[sa.length - 1];
+                return value;
+            }
+
+        }
+        return "";
+    }
+
+    protected List<String> getValueListByPattern(String key, String content, String ruleValue, String splitSign) {
+        if (StringUtils.hasText(ruleValue)) {
+            List<String> list = PatternMatcherUtil.getMatcher(ruleValue, content);
+            if (list.isEmpty()) {
+                return list;
+            }
+            if ("".equals(splitSign)) {
+                return list;
+            } else {
+                return list.stream().map((item) -> {
+                    String[] sa = item.split(splitSign);
+                    return sa[sa.length - 1];
+                }).collect(Collectors.toList());
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    protected void handleNotMatch(String key, String reg, AnalyzeParamsModel apm) throws AnalyzeBillException {
+        throw new AnalyzeBillException(String.format("未找到匹配值,bank=%s,cardType=%s,key=%s,reg=%s",
+                cardType.getBankCode().getBankCode(), cardType.getCardCode(), key, reg));
+    }
+
+    /**
+     *
+     * @Description 只能解决多账户统一还款类账单
+     * @param apm
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    @Transactional
+    protected void handleResultInternal(AnalyzeParamsModel apm) {
+        Long emailId = apm.getEmailId();
+
+        int month = 0;
+        List<CreditCard> cardList = apm.getResult().getCardList();
+        List<CreditBill> billList = apm.getResult().getBillList();
+        // 在账单增加file关系
+        billList.forEach(bill -> {
+            bill.setFileId(apm.getFileId());
+        });
+        List<CreditBillDetail> detailList = apm.getResult().getDetailList();
+        CreditCard saveCard = null;
+        CreditBill saveBill = null;
+        // 根据明细中出现的卡号的数量最多的选出一个卡号进行保存
+        // 若没有明细,那么无法抓取到卡号,此账单宣告解析失败
+        if (!detailList.isEmpty()) {
+            Map<String, Long> groupDetail = detailList.stream()
+                    .collect(Collectors.groupingBy(CreditBillDetail::getCardNumbers, Collectors.counting()));
+            String cardNumbers = groupDetail.entrySet().stream().max((o1, o2) -> {
+                return o1.getValue() > o2.getValue() ? 1 : -1;
+            }).get().getKey();
+            saveCard = cardList.stream().filter(c -> c.getNumbers().equals(cardNumbers)).findFirst().get();
+        }
+        if (!billList.isEmpty()) {
+            saveBill = billList.get(0);
+        }
+        // 保存或更新卡信息,若已经存在同一银行,相同邮箱的卡记录,说明已经抓取到一个统一还款卡号,则此次抓取的卡号不予记录
+        creditCardService.saveOrUpdateUnionCreditCard(saveCard);
+        // 保存账单
+        saveBill.setCardId(saveCard.getId());
+        saveBill.setEmailId(emailId);
+        saveBill.setSentDate(apm.getSentDate());
+        month = Integer.valueOf(saveBill.getMonth());
+        creditBillService.saveCreditBill(saveBill);
+        // 保存明细
+        if (!detailList.isEmpty()) {
+            creditBillDetailService.batchSaveBillDetail(month, detailList);
+        }
+        // 保存账单和明细的关系
+        List<CreditBillDetailRelation> relationList = new ArrayList<CreditBillDetailRelation>();
+
+        // 查询邮件和用户的关系
+        List<CreditUserEmailRelation> emialRelationList = userEmailRelationMapper.findByEmail(emailId);
+        List<CreditUserBillRelation> billRelationList = new ArrayList<CreditUserBillRelation>();
+        logger.info("billList============================={}", billList.size());
+        logger.info("emialRelationList======================{}", emialRelationList.size());
+        billList.forEach(bill -> {
+            detailList.forEach(detail -> {
+                CreditBillDetailRelation relation = new CreditBillDetailRelation();
+                relation.setBillId(bill.getId());
+                relation.setBillDetailId(detail.getId());
+                relationList.add(relation);
+            });
+            emialRelationList.forEach(userEmail -> {
+                CreditUserBillRelation billRelation = new CreditUserBillRelation();
+                logger.info("bill.getId()============================={}", bill.getId());
+                logger.info("userEmail.getUserId()============================={}", userEmail.getUserId());
+                billRelation.setBillId(bill.getId());
+                billRelation.setUserId(userEmail.getUserId());
+                billRelationList.add(billRelation);
+            });
+        });
+        creditBillDetailRelationService.batchSaveBillDetailRelation(month, relationList);
+
+        List<CreditUserCardRelation> cardRelationList = new ArrayList<CreditUserCardRelation>();
+        // 保存账单和用户关系。
+        userBillRelationMapper.batchInsert(billRelationList);
+        // 保存卡片和用户关系
+        cardList.forEach(card -> {
+
+            emialRelationList.forEach(userEmail -> {
+                CreditUserCardRelation cardRelation = new CreditUserCardRelation();
+                cardRelation.setCardId(card.getId());
+                cardRelation.setUserId(userEmail.getUserId());
+                cardRelationList.add(cardRelation);
+            });
+
+        });
+        // 保存
+        userCardRelationMapper.batchInsert(cardRelationList);
+    }
+
+    protected void initDetail() {
+        if (rules != null && StringUtils.hasText(rules.getDetails())) {
+            if (StringUtils.hasText(rules.getTransactionDate())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getTransactionDate()), "transactionDate");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+            if (StringUtils.hasText(rules.getBillingDate())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getBillingDate()), "billingDate");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+            if (StringUtils.hasText(rules.getTransactionDescription())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getTransactionDescription()), "transactionDescription");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+            if (StringUtils.hasText(rules.getTransactionCurrency())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getTransactionCurrency()), "transactionCurrency");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+            if (StringUtils.hasText(rules.getTransactionAmount())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getTransactionAmount()), "transactionAmount");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+            if (StringUtils.hasText(rules.getAccountableAmount())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getAccountableAmount()), "accountableAmount");
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+
+            if (StringUtils.hasText(rules.getCardNumbers())) {
+                try {
+                    detailMap.put(Integer.parseInt(rules.getCardNumbers()), "cardNumbers");
+                } catch (Exception e) {
+
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取模板对应的关键字
+     */
+    protected void initRules() {
+        // 根据cardCode从缓存中获取对应的规则
+        String cardCode = cardType.getCardCode();
+        rules = TemplateCache.templateCache.get(cardCode);
+
+    }
+
+    /**
+     *
+     * @Title: setCard
+     * @Description: 设置行用卡
+     * @param card
+     * @param bill
+     * @param apm
+     * @return void 返回类型 @throws
+     */
+    protected void setCard(List<CreditCard> cardList, List<CreditBill> billList, AnalyzeParamsModel apm) {
+        for (int i = 0; i < cardList.size(); i++) {
+            CreditCard card = cardList.get(i);
+            CreditBill bill = null;
+            if (i <= billList.size() - 1) {
+                bill = billList.get(i);
+                card.setCash(bill.getCash());
+                card.setCredits(bill.getCredits());
+                if (!StringUtils.hasText(card.getBillDay()) && bill.getEndDate() != null) {
+                    String billDay = DateUtil.getDateField(bill.getEndDate(), Calendar.DAY_OF_MONTH);
+                    card.setBillDay(billDay);
+                }
+                // 信用卡中添加还款日和账单金额
+                addDueBillAmount(card, bill, apm);
+            }
+            card.setBankId(new Long(apm.getBankId()));
+            card.setEmail(apm.getEmail());
+        }
+    }
+
+    /**
+     *
+     * @Title: setCardNumbers @Description: 卡号
+     * @param card
+     * @param number
+     * @return void 返回类型 @throws
+     */
+    protected void setCardNumbers(List<CreditCard> cardList, String number) {
+        if (StringUtils.hasText(rules.getCardNumbers())) {
+            try {
+                int n = Integer.parseInt(rules.getCardNumbers());
+                String[] detailArray = number.split(" ");
+                String cardNo = detailArray[n];
+                CreditCard card = new CreditCard();
+                card.setNumbers(cardNo);
+                if (!cardList.contains(card)) {
+                    cardList.add(card);
+                }
+            } catch (Exception e) {
+
+            }
+        }
+    }
+
+    /**
+     * 设置信用卡类型
+     */
+    protected void setCardType() {
+
+    }
+
+    protected CreditBillDetail setCreditBillDetail(String detail) {
+        CreditBillDetail cbd = new CreditBillDetail();
+        String[] detailArray = detail.split(" ");
+        for (Integer i = 0; i < detailArray.length; i++) {
+            if (detailMap.containsKey(i)) {
+                Field field;
+                try {
+                    field = CreditBillDetail.class.getDeclaredField(detailMap.get(i));
+                    if (field.getType() == Date.class) {
+                        ReflectionUtils.setField(field, cbd, DateUtil.parseDate(detailArray[i]));
+                    } else {
+                        ReflectionUtils.setField(field, cbd, detailArray[i]);
+                    }
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+
+            } else {
+                ///
+                setField(cbd, i, detailArray[i]);
+            }
+
+        }
+        return cbd;
+
+    }
+
+    protected void setField(CreditBillDetail cbd, int index, String value) {
+
+    }
+}

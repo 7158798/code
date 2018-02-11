@@ -1,0 +1,63 @@
+package com.pay.card.bean;
+
+import java.io.Serializable;
+
+public class CreditCardBean implements Serializable {
+
+    private static final long serialVersionUID = 2235442159248693718L;
+    /**
+     * 商户编号
+     */
+    private String customerNo;
+    /**
+     * 手机号
+     */
+    private String phoneNo;
+    /**
+     * 渠道号
+     */
+    private String channelCode;
+    /**
+     * 用户id
+     */
+    private Long userId;
+
+    public String getChannelCode() {
+        return channelCode;
+    }
+
+    public String getCustomerNo() {
+        return customerNo;
+    }
+
+    public String getPhoneNo() {
+        return phoneNo;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setChannelCode(String channelCode) {
+        this.channelCode = channelCode;
+    }
+
+    public void setCustomerNo(String customerNo) {
+        this.customerNo = customerNo;
+    }
+
+    public void setPhoneNo(String phoneNo) {
+        this.phoneNo = phoneNo;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    @Override
+    public String toString() {
+        return "CreditCardBean [customerNo=" + customerNo + ", phoneNo=" + phoneNo + ", channelCode=" + channelCode
+                        + ", userId=" + userId + "]";
+    }
+
+}

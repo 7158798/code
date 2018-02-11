@@ -1,0 +1,1 @@
+webpackJsonp([1,8],{1:function(e,n){},18:function(e,n,t){"use strict";function u(e){return e&&e.__esModule?e:{default:e}}var o=t(0),c=u(o);t(1);new c.default({el:"#root"})}},[18]);

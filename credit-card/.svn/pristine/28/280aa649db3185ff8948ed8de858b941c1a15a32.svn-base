@@ -1,0 +1,31 @@
+package com.pay.card.service.impl;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditBillDetailDao;
+import com.pay.card.model.CreditBillDetail;
+import com.pay.card.service.CreditBillDetailService;
+
+@Service
+public class CreditBillDetailServiceImpl implements CreditBillDetailService {
+
+    @Autowired
+    private CreditBillDetailDao creditBillDetailDao;
+
+    @Override
+    public int findBillDetailCount(Long billId, String yearMonth) {
+
+        return creditBillDetailDao.findBillDatailCount(billId, yearMonth);
+    }
+
+    @Override
+    public List<CreditBillDetail> findBillDetailList(Long billId, Long userId, String yearMonth, int pageNumber,
+                    int pageSize) {
+
+        return creditBillDetailDao.findBillDetailList(billId, userId, yearMonth, pageNumber, pageSize);
+    }
+
+}

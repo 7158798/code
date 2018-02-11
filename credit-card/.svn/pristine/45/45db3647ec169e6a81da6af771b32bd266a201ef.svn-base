@@ -1,0 +1,49 @@
+package com.pay.card.enums;
+
+import com.alibaba.fastjson.JSONObject;
+
+public enum CodeEnum {
+    SUCCESS("0000", "操作成功"), FAIL("0001", "操作失败"), PARAMETER_REEOR("0002", "参数错误"), PROCESSING("0003", "处理中"), REPEAT(
+            "0004", "卡号重复"), EMAIL_LOGIN_FAIL("0005", "邮箱登录失败 "), SAVE_CARD_FAIL("0005",
+                    "保存信用卡失败 "), SAVE_REPAYMENT_FAIL("0005", "保存还款记录失败 "), DELETE_REPAYMENT_FAIL("0005", "删除还款记录失败 ");
+    ;
+    /**
+     * 消息
+     */
+    private String msg;
+    /**
+     * 编码
+     */
+    private String code;
+
+    private CodeEnum(String code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public JSONObject getJsonMsg() {
+        String resultMsg = "{\"code\":\"%s\",\"msg\":\"%s\"}";
+        return JSONObject.parseObject(String.format(resultMsg, code, msg));
+    }
+
+    public String getMessage() {
+        String resultMsg = "{\"code\":\"%s\",\"msg\":\"%s\"}";
+        return String.format(resultMsg, code, msg);
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+}

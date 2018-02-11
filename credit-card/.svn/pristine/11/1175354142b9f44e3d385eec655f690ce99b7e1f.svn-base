@@ -1,0 +1,65 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditBillDao;
+import com.pay.card.model.CreditBill;
+import com.pay.card.service.CreditBillService;
+
+@Service
+public class CreditBillServiceImpl implements CreditBillService {
+    @Autowired
+    private CreditBillDao creditBillDao;
+
+    /**
+     * @Title: findCreditBillList
+     * @Description: 查询账单列表
+     * @param creditBill
+     * @return List<CreditBill> 返回类型 @throws
+     */
+    @Override
+    public List<CreditBill> findCreditBillList(CreditBill creditBill) {
+        Sort sort = new Sort(Direction.ASC, "id");
+        return creditBillDao.findAll(getSpecification(creditBill), sort);
+    }
+
+    public Specification<CreditBill> getSpecification(CreditBill creditBill) {
+        return new Specification<CreditBill>() {
+            @Override
+            public Predicate toPredicate(Root<CreditBill> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+
+                list.add(cb.equal(root.get("card").get("id").as(Long.class), creditBill.getCard().getId()));
+
+                list.add(cb.equal(root.get("userId").as(Long.class), creditBill.getUserId()));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    /**
+     * @Title: saveOrUpdate
+     * @Description: 保存账单
+     * @param creditBill
+     * @return CreditBill 返回类型 @throws
+     */
+    @Override
+    public CreditBill saveOrUpdate(CreditBill creditBill) {
+        creditBill = creditBillDao.save(creditBill);
+        return creditBill;
+    }
+}

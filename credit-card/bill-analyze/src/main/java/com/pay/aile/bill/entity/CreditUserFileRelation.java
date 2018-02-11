@@ -1,0 +1,100 @@
+
+/**
+* @Title: CreditUserFileRelation.java
+* @Package com.pay.aile.bill.entity
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年11月30日
+* @version V1.0
+*/
+
+package com.pay.aile.bill.entity;
+
+import java.io.Serializable;
+
+import com.baomidou.mybatisplus.activerecord.Model;
+import com.baomidou.mybatisplus.annotations.TableField;
+import com.baomidou.mybatisplus.annotations.TableId;
+import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.enums.IdType;
+
+/**
+ * @ClassName: CreditUserFileRelation
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年11月30日
+ *
+ */
+@TableName("credit_user_file_relation")
+public class CreditUserFileRelation extends Model<CreditUserFileRelation> {
+
+    /**
+     * @Fields serialVersionUID : TODO(用一句话描述这个变量表示什么)
+     */
+
+    private static final long serialVersionUID = -3642836670952416267L;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+    @TableField("user_id")
+    private Long userId;
+    @TableField("file_id")
+    private Long fileId;
+
+    /**
+     * @return fileId
+     */
+
+    public Long getFileId() {
+        return fileId;
+    }
+
+    /**
+     * @return id
+     */
+
+    public Long getId() {
+        return id;
+    }
+
+    /**
+     * @return userId
+     */
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    /**
+     * @param fileId
+     *            the fileId to set
+     */
+
+    public void setFileId(Long fileId) {
+        this.fileId = fileId;
+    }
+
+    /**
+     * @param id
+     *            the id to set
+     */
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    /**
+     * @param userId
+     *            the userId to set
+     */
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    @Override
+    protected Serializable pkVal() {
+        // TODO Auto-generated method stub
+        return id;
+    }
+
+}

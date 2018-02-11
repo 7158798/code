@@ -1,0 +1,90 @@
+package com.pay.card.model;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicUpdate;
+
+@Table(name = "credit_repayment")
+@Entity
+@DynamicInsert
+@DynamicUpdate
+public class CreditRepayment extends BaseEntity implements Serializable {
+
+    /**
+     * @Fields field:field:{todo}(用一句话描述这个变量表示什么)
+     */
+
+    private static final long serialVersionUID = 487958089381735994L;
+
+    /**
+     * 还款金额
+     */
+    private BigDecimal amount;
+    /**
+     * 账单
+     */
+    private CreditBill bill;
+    /**
+     * 还款类型 0 标记还款,1 标记已还清 ,2 实际还款 ,3 账单还款
+     */
+    private Integer type;
+
+    /**
+     * 用户
+     */
+    private CreditUserInfo userInfo;
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    @ManyToOne(cascade = { CascadeType.MERGE }, fetch = FetchType.EAGER, optional = true)
+    @JoinColumn(name = "bill_id")
+    public CreditBill getBill() {
+        return bill;
+    }
+
+    public Integer getType() {
+        return type;
+    }
+
+    /**
+     * @return userInfo
+     */
+    @OneToOne(cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
+    public CreditUserInfo getUserInfo() {
+        return userInfo;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public void setBill(CreditBill bill) {
+        this.bill = bill;
+    }
+
+    public void setType(Integer type) {
+        this.type = type;
+    }
+
+    /**
+     * @param userInfo
+     *            the userInfo to set
+     */
+
+    public void setUserInfo(CreditUserInfo userInfo) {
+        this.userInfo = userInfo;
+    }
+
+}

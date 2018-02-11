@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditUserEmailRelationMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditUserEmailRelation">
+		<id column="id" property="id" />
+		<result column="user_id" property="userId" />
+		<result column="email_id" property="emailId" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id as userId, email_id as emailId
+    </sql>
+    <select id="findByEmail" resultType="com.pay.aile.bill.entity.CreditUserEmailRelation" parameterType="long"  >      
+         select <include refid="Base_Column_List" /> from credit_user_email_relation where email_id=#{emailId}  
+    </select>
+</mapper>

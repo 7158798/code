@@ -1,0 +1,33 @@
+package com.pay.card.config;
+
+import javax.sql.DataSource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import com.pay.dsmclient.v2.c3p0.C3p0PooledDataSource;
+
+@EnableTransactionManagement
+@Configuration
+@ConditionalOnProperty(name = { "environment.test", "environment.production" })
+public class DataSourceConfig {
+    private static final Logger logger = LoggerFactory.getLogger(DataSourceConfig.class);
+
+    @Value("${pay.datasource.model}")
+    private String model;
+    @Value("${pay.datasource.name}")
+    private String dsname;
+
+    @Bean
+    public DataSource dataSourceInit() {
+        C3p0PooledDataSource dataSource = new C3p0PooledDataSource();
+        dataSource.setDataSourceName(dsname);
+        return dataSource;
+    }
+
+}

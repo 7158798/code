@@ -1,0 +1,163 @@
+package com.pay.card.view;
+
+import java.math.BigDecimal;
+
+import com.pay.card.model.CreditCard;
+import com.pay.card.utils.DateUtil;
+import com.pay.card.web.context.CardBuildContext;
+
+/**
+ * @ClassName: CreditCardView
+ * @Description:信用卡视图
+ * @author jinjing
+ * @date 2017年11月15日
+ */
+public class CreditCardView {
+
+    private final CreditCard creditCard;
+
+    private final CardBuildContext buildContext;
+
+    public CreditCardView(CreditCard card, CardBuildContext buildContext) {
+        creditCard = card;
+        this.buildContext = buildContext;
+    }
+
+    /**
+     * @Title: getBankName @Description:银行名称 @return String @throws
+     */
+    public String getBankName() {
+        if (creditCard.getBank() != null) {
+            return creditCard.getBank().getName();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getBankShortName
+     * @Description:银行简称
+     * @return String 返回类型 @throws
+     */
+    public String getBankShortName() {
+        if (creditCard.getBank() != null) {
+            return creditCard.getBank().getShortName();
+        }
+        return "";
+    }
+
+    /**
+     * @Title: getBillAmount
+     * @Description:账单金额
+     * @return BigDecimal 返回类型 @throws
+     */
+    public BigDecimal getBillAmount() {
+
+        return creditCard.getBillAmount();
+
+    }
+
+    /**
+     * @Title: getBillDay
+     * @Description:
+     * @return Integer 返回类型 @throws
+     */
+    public Integer getBillDay() {
+        // return creditCard.getBillDay();
+        return com.pay.card.utils.DateUtil.getBillDay(creditCard.getBillDay());
+
+    }
+
+    /**
+     * @Title: getCardholder
+     * @Description:持卡人
+     * @return String 返回类型 @throws
+     */
+    public String getCardholder() {
+        return creditCard.getCardholder();
+
+    }
+
+    /**
+     * @Title: getConsumption
+     * @Description:未出账单金额
+     * @return BigDecimal 返回类型 @throws
+     */
+    public BigDecimal getConsumption() {
+        return creditCard.getConsumption();
+
+    }
+
+    /**
+     * @Title: getCredits
+     * @Description:信用卡额度
+     * @return BigDecimal 返回类型 @throws
+     */
+    public BigDecimal getCredits() {
+
+        return creditCard.getCredits();
+
+    }
+
+    /**
+     * @Title: getDueDay
+     * @Description:获取还款时间
+     * @return Long 返回类型 @throws
+     */
+    public Long getDueDay() {
+        if (creditCard.getDueDate() != null) {
+            return com.pay.card.utils.DateUtil.getDueDay(creditCard.getDueDate());
+        }
+        return null;
+    }
+
+    /**
+     * @Title: getFreeInterestPeriod
+     * @Description: 获取免息期
+     * @return Long 返回类型 @throws
+     */
+    public Long getFreeInterestPeriod() {
+        try {
+            return DateUtil.getFreeInterestPeriod(Integer.parseInt(creditCard.getBillDay()),
+                            Integer.parseInt(creditCard.getDueDay()));
+        } catch (Exception e) {
+
+        }
+        return 0L;
+    }
+
+    public Long getId() {
+        return creditCard.getId();
+    }
+
+    /**
+     * @Title: getNumbers
+     * @Description:银行卡号
+     * @return String @throws
+     */
+    public String getNumbers() {
+        String numbers = creditCard.getNumbers();
+        if (numbers != null && numbers.length() > 4) {
+            numbers = numbers.substring(numbers.length() - 4, numbers.length());
+            return numbers;
+        }
+        return numbers;
+    }
+
+    /**
+     * @Title: getRemainingAmount
+     * @Description:剩余应还金额
+     * @return BigDecimal @throws
+     */
+    public BigDecimal getRemainingAmount() {
+        if (creditCard.getBillAmount() != null) {
+            return creditCard.getBillAmount().subtract(creditCard.getRepayment());
+        }
+        return null;
+    }
+
+    public BigDecimal getRepayment() {
+
+        return creditCard.getRepayment();
+
+    }
+}

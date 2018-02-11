@@ -1,0 +1,52 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditSetDao;
+import com.pay.card.model.CreditSet;
+import com.pay.card.service.CreditSetService;
+
+@Service
+public class CreditSetServiceImpl implements CreditSetService {
+    @Autowired
+    private CreditSetDao creditSetDao;
+
+    @Override
+    public CreditSet findCreditSet(CreditSet creditSet) {
+        creditSet = creditSetDao.findOne(getSpecification(creditSet));
+        return creditSet;
+    }
+
+    public Specification<CreditSet> getSpecification(CreditSet creditSet) {
+        return new Specification<CreditSet>() {
+            @Override
+            public Predicate toPredicate(Root<CreditSet> root, CriteriaQuery<?> query,
+                    CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+
+                list.add(cb.equal(root.get("card").as(String.class), creditSet.getCustomerNo()));
+
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    @Override
+    public CreditSet saveOrUpdate(CreditSet creditSet) {
+        creditSet = creditSetDao.save(creditSet);
+        return creditSet;
+    }
+
+}

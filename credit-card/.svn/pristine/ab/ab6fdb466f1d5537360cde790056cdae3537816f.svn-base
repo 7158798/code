@@ -1,0 +1,35 @@
+package com.pay.card.service;
+
+import java.util.Date;
+import java.util.List;
+
+import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.alibaba.fastjson.JSON;
+import com.pay.card.BaseTest;
+import com.pay.card.model.CreditUserEmailRelation;
+
+public class CreditUserEmailRelationServiceImplTest extends BaseTest {
+
+    @Autowired
+    private CreditUserEmailRelationService creditUserEmailRelationService;
+
+    @Test
+    public void findTest() {
+        CreditUserEmailRelation creditUserEmailRelation = new CreditUserEmailRelation();
+        creditUserEmailRelation.setUserId(123456l);
+        List<CreditUserEmailRelation> list = creditUserEmailRelationService
+                        .findCreditUserEmailRelation(creditUserEmailRelation);
+        System.out.println(JSON.toJSONString(list));
+    }
+
+    @Test
+    public void saveTest() {
+        CreditUserEmailRelation creditUserEmailRelation = new CreditUserEmailRelation();
+        creditUserEmailRelation.setCreateDate(new Date());
+        creditUserEmailRelation.setStatus(1);
+        creditUserEmailRelation.setUserId(1l);
+        creditUserEmailRelationService.saveCreditUserEmailRelation(creditUserEmailRelation);
+    }
+}

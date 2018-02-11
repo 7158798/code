@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditBillDetailMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditBillDetail">
+		<id column="id" property="id" />
+		<result column="bill_id" property="billId" />
+		<result column="transaction_date" property="transactionDate" />
+		<result column="billing_date" property="billingDate" />
+		<result column="transaction_description" property="transactionDescription" />
+		<result column="transaction_amount" property="transactionAmount" />
+		<result column="accountable_amount" property="accountableAmount" />
+		<result column="account_type" property="accountType" />
+        <result column="status" property="status" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="transaction_currency" property="transactionCurrency" />
+        <result column="card_id" property="cardId" />
+        
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bill_id AS billId, transaction_date AS transactionDate, billing_date AS billingDate, 
+        transaction_description AS transactionDescription, transaction_amount AS transactionAmount, 
+        accountable_amount AS accountableAmount, account_type AS accountType,status,create_date as createDate,
+        update_date as updateDate,transaction_currency AS transactionCurrency,card_id as cardId 
+    </sql>
+    
+    <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_bill_detail_${year}_${month} (bill_id,transaction_date,billing_date,transaction_description,
+        transaction_amount,accountable_amount,account_type,status,create_date,update_date,
+        transaction_currency)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.billId},#{item.transactionDate},#{item.billingDate},#{item.transactionDescription},
+            #{item.transactionAmount},#{item.accountableAmount},#{item.accountType},#{item.status},#{item.createDate},#{item.updateDate},
+             #{item.transactionCurrency}
+            )         
+        </foreach>
+    </insert>
+    <insert id="batchInsertBase" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_bill_detail (bill_id,transaction_date,billing_date,transaction_description,
+        transaction_amount,accountable_amount,account_type,status,create_date,update_date,
+        transaction_currency,card_id)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.billId},#{item.transactionDate},#{item.billingDate},#{item.transactionDescription},
+            #{item.transactionAmount},#{item.accountableAmount},#{item.accountType},#{item.status},#{item.createDate},#{item.updateDate},
+             #{item.transactionCurrency},#{item.cardId}
+            )         
+        </foreach>
+    </insert>
+</mapper>

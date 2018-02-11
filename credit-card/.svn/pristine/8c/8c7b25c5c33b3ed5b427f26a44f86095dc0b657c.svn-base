@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditUserErrorLogRelationMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditUserErrorLogRelation">
+		<id column="id" property="id" />
+		<result column="user_id" property="userId" />
+		<result column="error_log_id" property="errorLogId" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id AS userId, error_log_id AS errorLogId
+    </sql>
+    <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_user_error_log_relation (user_id,error_log_id)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.userId},#{item.errorLogId})         
+        </foreach>
+    </insert>
+</mapper>

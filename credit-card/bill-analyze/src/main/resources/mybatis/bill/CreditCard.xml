@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditCardMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditCard">
+		<id column="id" property="id" />
+		<result column="bank_id" property="bankId" />
+		<result column="bill_day" property="billDay" />
+		<result column="credits" property="credits" />
+		<result column="cash" property="cash" />
+		<result column="name" property="name" />
+		<result column="numbers" property="numbers" />
+		<result column="prepaid_cash_amount" property="prepaidCashAmount" />
+		<result column="cardholder" property="cardholder" />
+		<result column="integral" property="integral" />
+        <result column="email" property="email" />
+        <result column="bill_amount" property="billAmount" />
+        <result column="due_day" property="dueDay" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="minimum" property="minimum" />
+        <result column="status" property="status" />
+        <result column="begin_date" property="beginDate" />
+        <result column="end_date" property="endDate" />
+        <result column="due_date" property="dueDate" />
+        <result column="complete_numbers" property="completeNumbers" />
+        <result column="user_id" property="userId" />
+        <result column="credits_type" property="creditsType" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bank_id AS bankId, bill_day AS billDay, credits, cash, name , numbers, 
+        prepaid_cash_amount as prepaidCashAmount,cardholder,integral,email,
+        bill_amount as billAmount,due_day as dueDay,create_date as createDate,update_date as updateDate,
+        minimum,status,complete_numbers as completeNumbers,user_id as userId,credits_type as creditsType
+    </sql>
+   <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_card (bank_id,bill_day,credits,cash,name,numbers,prepaid_cash_amount,
+        cardholder,integral,email,bill_amount,due_day,create_date,minimum,begin_date,end_date,
+        complete_numbers,user_id,credits_type)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.bankId},#{item.billDay},#{item.credits},#{item.cash},#{item.name},
+            #{item.numbers},#{item.prepaidCashAmount},#{item.cardholder},#{item.integral},
+            #{item.email},#{item.billAmount},#{item.dueDay},#{item.createDate},
+            #{item.minimum},#{item.beginDate},#{item.endDate},#{item.completeNumbers},
+            ,#{item.userId},#{item.creditsType}
+            )         
+        </foreach>
+    </insert>
+    
+    <insert id="insertOrUpdate" parameterType="com.pay.aile.bill.entity.CreditCard"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_card 
+        <trim prefix="(" suffix=")" suffixOverrides="," >
+            <if test="bankId != null">
+                bank_id,
+            </if>
+            <if test="billDay != null">
+                bill_day,
+            </if>
+            <if test="credits != null">
+                credits,
+            </if>
+            <if test="cash != null">
+                cash,
+            </if>
+            <if test="name != null">
+                name,
+            </if>
+            <if test="numbers != null">
+                numbers,
+            </if>
+            <if test="prepaidCashAmount != null">
+                prepaid_cash_amount,
+            </if>
+            <if test="cardholder != null">
+                cardholder,
+            </if>
+            <if test="integral != null">
+                integral,
+            </if>
+            <if test="email != null">
+                email,
+            </if>
+            <if test="billAmount != null" >
+                bill_amount,
+            </if>
+            <if test="dueDay != null">
+                due_day,
+            </if>
+            <if test="createDate != null">
+                create_date,
+            </if>
+            <if test="minimum != null">
+                minimum,
+            </if>
+            <if test="status != null">
+                status,
+            </if>
+            <if test="beginDate != null">
+                begin_date,
+            </if>
+            <if test="endDate != null">
+                end_date,
+            </if>
+            <if test="dueDate != null">
+                due_date,
+            </if>
+            <if test="completeNumbers != null">
+                complete_numbers,
+            </if>
+            <if test="userId != null">
+                user_id,
+            </if>
+            <if test="creditsType != null">
+                credits_type
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides="," >
+            <if test="bankId != null">
+                #{bankId},
+            </if>
+            <if test="billDay != null">
+                #{billDay},
+            </if>
+            <if test="credits != null">
+                #{credits},
+            </if>
+            <if test="cash != null">
+                #{cash},
+            </if>
+            <if test="name != null">
+                #{name},
+            </if>
+            <if test="numbers != null">
+                #{numbers},
+            </if>
+            <if test="prepaidCashAmount != null">
+                #{prepaidCashAmount},
+            </if>
+            <if test="cardholder != null">
+                #{cardholder},
+            </if>
+            <if test="integral != null">
+                #{integral},
+            </if>
+            <if test="email != null">
+                #{email},
+            </if>
+            <if test="billAmount != null">
+                #{billAmount},
+            </if>
+            <if test="dueDay != null">
+                #{dueDay},
+            </if>
+            <if test="createDate != null">
+                #{createDate},
+            </if>
+            <if test="minimum != null">
+                #{minimum},
+            </if>
+            <if test="status != null">
+                #{status},
+            </if>
+            <if test="beginDate != null">
+                #{beginDate},
+            </if>
+            <if test="endDate != null">
+                #{endDate},
+            </if>
+            <if test="dueDate != null">
+                #{dueDate},
+            </if>
+            <if test="completeNumbers != null">
+                #{completeNumbers},
+            </if>
+            <if test="userId != null">
+                #{userId},
+            </if>
+            <if test="creditsType != null">
+                #{creditsType}
+            </if>
+        </trim>
+        on duplicate key update
+        <if test="billDay != null">
+            bill_day=values(bill_day),
+        </if>
+        <if test="credits != null">
+            credits=(case when (values(credits) = -1 and credits > 0) then credits else values(credits) end),
+        </if>
+        <if test="cash != null">
+            cash=values(cash),
+        </if>
+        <if test="name != null">
+            name=values(name),
+        </if>
+        <if test="prepaidCashAmount != null">
+            prepaid_cash_amount=values(prepaid_cash_amount),
+        </if>
+        <if test="integral != null">
+            integral=values(integral),
+        </if>
+        <if test="billAmount != null">
+            bill_amount=values(bill_amount),
+        </if>
+        <if test="dueDay != null">
+            due_day=values(due_day),
+        </if>
+        <if test="minimum != null">
+            minimum=values(minimum),
+        </if>
+        <if test="status != null">
+            status=(case when status = 1 then 1 else values(status) end),
+        </if>
+        <if test="beginDate != null">
+            begin_date=values(begin_date),
+        </if>
+        <if test="endDate != null">
+            end_date=values(end_date),
+        </if>
+        <if test="dueDate != null">
+            due_date=values(due_date),
+        </if>
+        <if test="creditsType != null">
+            credits_type=values(credits_type),
+        </if>
+        source = 0,
+        update_date = now(),
+        version=ifnull(version,0) + 1
+    </insert>
+    <select id="findByUnioue" resultMap="BaseResultMap">
+        select * from credit_card where bank_id= #{bankId} and cardholder=#{cardholder} and numbers=#{numbers} and user_id=#{userId}
+    </select>
+     <update id="updateIntegral" parameterType="java.lang.Long">  
+        update credit_card a
+        left join (
+            select b.card_id,
+                   ifnull(b.integral,0) as integral,
+                   b.credits 
+            from credit_bill b 
+            where b.card_id = #{cardId}  
+            order by `year` DESC,`month` desc LIMIT 0,1
+        ) c on a.id = c.card_id
+        set a.integral = c.integral,
+            a.credits = c.credits
+        where a.id = #{cardId}  
+    </update>  
+    
+    
+</mapper>

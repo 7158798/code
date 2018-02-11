@@ -1,0 +1,14 @@
+package com.pay.card.service;
+
+import java.util.List;
+
+import com.pay.card.model.CreditBill;
+import com.pay.card.model.CreditBillDetail;
+
+public interface CreditBillService {
+    public List<CreditBillDetail> findBillDetailList(CreditBill creditBill, int pageNumber, int pageSize);
+
+    public List<CreditBill> findCreditBillList(CreditBill creditBill);
+
+    public CreditBill saveOrUpdate(CreditBill creditBill);
+}

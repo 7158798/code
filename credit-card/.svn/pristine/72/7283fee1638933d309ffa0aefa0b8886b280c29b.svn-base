@@ -1,0 +1,49 @@
+
+/**
+* @Title: HTML5Controller.java
+* @Package com.pay.card.api
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年12月22日
+* @version V1.0
+*/
+
+package com.pay.card.api;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+/**
+ * @ClassName: HTML5Controller
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年12月22日
+ *
+ */
+@Controller
+@RequestMapping("/html")
+public class HTML5Controller {
+    /*
+     * 帮助
+     */
+    @RequestMapping(value = "/help")
+    public String heip() {
+        return "static/help";
+    }
+
+    /*
+     * 导入失败
+     */
+    @RequestMapping(value = "/importFail")
+    public String importFail(String email) {
+        return "static/help";
+    }
+
+    /*
+     * 协议
+     */
+    @RequestMapping(value = "/protocol")
+    public String protocol() {
+        return "static/help";
+    }
+}

@@ -1,0 +1,7 @@
+package com.pay.card.service;
+
+import com.pay.card.model.CreditRepayment;
+
+public interface CreditRepaymentService {
+    public CreditRepayment saveOrUpdate(CreditRepayment creditRepayment);
+}

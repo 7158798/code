@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditCardMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditCard">
+		<id column="id" property="id" />
+		<result column="bank_id" property="bankId" />
+		<result column="bill_day" property="billDay" />
+		<result column="credits" property="credits" />
+		<result column="cash" property="cash" />
+		<result column="name" property="name" />
+		<result column="numbers" property="numbers" />
+		<result column="prepaid_cash_amount" property="prepaidCashAmount" />
+		<result column="cardholder" property="cardholder" />
+		<result column="integral" property="integral" />
+        <result column="email" property="email" />
+        <result column="bill_amount" property="billAmount" />
+        <result column="due_day" property="dueDay" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="minimum" property="minimum" />
+        <result column="status" property="status" />
+        <result column="begin_date" property="beginDate" />
+        <result column="end_date" property="endDate" />
+        <result column="due_date" property="dueDate" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bank_id AS bankId, bill_day AS billDay, credits, cash, name , numbers, 
+        prepaid_cash_amount as prepaidCashAmount,cardholder,integral,email,
+        bill_amount as billAmount,due_day as dueDay,create_date as createDate,update_date as updateDate,
+        minimum,status
+    </sql>
+   <insert id="batchInsert" parameterType="java.util.List"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_card (bank_id,bill_day,credits,cash,name,numbers,prepaid_cash_amount,
+        cardholder,integral,email,bill_amount,due_day,create_date,minimum,begin_date,end_date)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+            (#{item.bankId},#{item.billDay},#{item.credits},#{item.cash},#{item.name},
+            #{item.numbers},#{item.prepaidCashAmount},#{item.cardholder},#{item.integral},
+            #{item.email},#{item.billAmount},#{item.dueDay},#{item.createDate},
+            #{item.minimum},#{item.beginDate},#{item.endDate}
+            )         
+        </foreach>
+    </insert>
+    
+    <insert id="insertOrUpdate" parameterType="com.pay.aile.bill.entity.CreditCard"  useGeneratedKeys="true" keyProperty="id">
+        insert credit_card (bank_id,bill_day,credits,cash,name,numbers,prepaid_cash_amount,
+        cardholder,integral,email,bill_amount,due_day,create_date,minimum,status,begin_date,end_date,due_date)
+        values
+        (#{bankId},#{billDay},#{credits},#{cash},#{name},
+            #{numbers},#{prepaidCashAmount},#{cardholder},#{integral},
+            #{email},#{billAmount},#{dueDay},#{createDate},#{minimum},#{status}
+            ,#{beginDate},#{endDate},#{dueDate}
+        )     
+        on duplicate key update
+        <if test="billDay != null">
+            bill_day=values(bill_day),
+        </if>
+        <if test="credits != null">
+            credits=values(credits),
+        </if>
+        <if test="cash != null">
+            cash=values(cash),
+        </if>
+        <if test="name != null">
+            name=values(name),
+        </if>
+        <if test="prepaidCashAmount != null">
+            prepaid_cash_amount=values(prepaid_cash_amount),
+        </if>
+        <if test="integral != null">
+            integral=values(integral),
+        </if>
+        <if test="billAmount != null">
+            bill_amount=values(bill_amount),
+        </if>
+        <if test="dueDay != null">
+            due_day=values(due_day),
+        </if>
+        <if test="minimum != null">
+            minimum=values(minimum),
+        </if>
+        <if test="status != null">
+            status=values(status),
+        </if>
+        <if test="beginDate != null">
+            begin_date=values(begin_date),
+        </if>
+        <if test="endDate != null">
+            end_date=values(end_date),
+        </if>
+        <if test="dueDate != null">
+            due_date=values(due_date),
+        </if>
+        update_date = now()
+    </insert>
+</mapper>

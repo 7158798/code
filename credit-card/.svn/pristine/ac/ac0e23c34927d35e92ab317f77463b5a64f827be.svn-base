@@ -1,0 +1,49 @@
+package com.pay.aile.bill.event;
+
+import java.util.List;
+
+import org.springframework.context.ApplicationListener;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.aile.bill.contant.Constant;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.enums.BankCodeEnum;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.model.AnalyzeResult;
+import com.pay.aile.bill.task.FileQueueRedisHandle;
+import com.pay.aile.bill.utils.JedisClusterUtils;
+
+@Component
+public class AnalyzeStatusListener implements ApplicationListener<AnalyzeStatusEvent> {
+
+    @Override
+    public void onApplicationEvent(AnalyzeStatusEvent event) {
+        if (event.getSource() == null) {
+            return;
+        }
+        AnalyzeParamsModel apm = (AnalyzeParamsModel) event.getSource();
+        if (!apm.getIsNew()) {
+            return;
+        }
+        Exception error = apm.getError();
+        if (error == null && apm.getResult() != null) {
+            // 解析成功
+            AnalyzeResult ar = apm.getResult();
+            List<CreditCard> cardList = ar.getCardList();
+            cardList.forEach(card -> {
+                JSONObject cardJson = new JSONObject();
+                cardJson.put("cardNo", card.getNumbers());
+                cardJson.put("cardholder", card.getCardholder());
+                cardJson.put("bankCode", apm.getBankCode());
+                cardJson.put("bankName", BankCodeEnum.getByBankCode(apm.getBankCode()).getShortName());
+                JedisClusterUtils.setSave(Constant.REDIS_CARDS + apm.getEmail(), cardJson.toJSONString());
+            });
+        }
+        if (apm != null) {
+            JedisClusterUtils.incrBy(Constant.REDIS_ANALYZED_STATUS + apm.getEmail(), 1);
+            JedisClusterUtils.delKey(FileQueueRedisHandle.MAIL_FILE_LIST_CONTENT + apm.getFileName());
+        }
+    }
+
+}

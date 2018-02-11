@@ -1,0 +1,87 @@
+
+/**
+* @Title: PushCardMessage.java
+* @Package com.pay.card.push
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年12月8日
+* @version V1.0
+*/
+
+package com.pay.card.push;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.astrotrain.client.ATProducer;
+import com.pay.astrotrain.client.exceptions.ATException;
+import com.pay.astrotrain.client.message.StringMessage;
+import com.pay.astrotrain.client.producer.DefaultATProducer;
+
+/**
+ * @ClassName: PushCardMessage
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年12月8日
+ *
+ */
+@Component
+public class PushCardMessage {
+
+    Logger logger = LoggerFactory.getLogger(PushCardMessage.class);
+    // @Resource
+    private DefaultATProducer atProducer;
+    @Value("${astrotrain.topic}")
+    private String topic = "mc_YOUSHUA";
+
+    /**
+     *
+     * @Title: send @Description: 发送消息
+     * @param message
+     * @param theme
+     * @return void 返回类型 @throws
+     */
+    // @Scheduled(cron = ("0 59 23 * * ?"))
+    // @Scheduled(cron = ("0 0/10 9-20 * * ?"))
+    public void send(String message, String theme) {
+        try {
+            ATProducer producer = atProducer.createProducer(topic);
+            logger.info("current theme is: {}", theme);
+            StringMessage tradeMsg = new StringMessage();
+            tradeMsg.setMsg(message);
+            producer.send(tradeMsg);
+        } catch (ATException e) {
+            logger.error("{}", e);
+        }
+    }
+
+    private Map<String, Object> sendMessage(String customerNo, String cardNo) {
+        Map<String, Object> map = new HashMap<String, Object>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String sendTime = sdf.format(new Date());
+        map.put("user_no", customerNo);
+        map.put("app", "YOUSHUA");
+        map.put("template_id", 16);//
+        map.put("template_parms", cardNo);
+
+        // 推送时间
+        map.put("plan_time", sendTime);
+        map.put("center_show", 1);
+        map.put("is_push", 1);
+        JSONObject jsend = new JSONObject();
+        jsend.put("type", "native"); // 原生模块跳转
+        jsend.put("redirect", "XYKHK"); // 信用卡还款页
+        jsend.put("keys", "nodata"); // 无跳转参数
+        map.put("redirect_params", jsend.toString());
+
+        return map;
+    }
+}

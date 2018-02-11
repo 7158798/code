@@ -1,0 +1,21 @@
+package com.pay.card.dao;
+
+import java.util.Date;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pay.card.model.CreditUserCardRelation;
+
+public interface CreditUserCardRelationDao extends JpaRepository<CreditUserCardRelation, Long>,
+        JpaSpecificationExecutor<CreditUserCardRelation> {
+
+    @Transactional
+    @Modifying
+    @Query("update CreditUserCardRelation set status = '0',update_date = ?3 where card_id = ?1 and user_id = ?2 ")
+    public void updateCardStatusById(Long cardId, Long userId, Date updateDate);
+
+}

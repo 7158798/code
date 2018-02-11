@@ -1,0 +1,60 @@
+package com.pay.aile.bill.analyze.banktemplate.ccb;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.pay.aile.bill.analyze.banktemplate.BaseBankSeparateShareDetailTemplate;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.mapper.CreditTemplateMapper;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+
+/**
+ *
+ * @author Charlie
+ * @description 建设银行解析模板
+ */
+@Service
+public class CCBTemplateNew extends BaseBankSeparateShareDetailTemplate implements AbstractCCBTemplate {
+
+    @Autowired
+    CreditTemplateMapper creditTemplateMapper;
+
+    @Override
+    public void initRules() {
+        super.initRules();
+        if (rules == null) {
+            rules = new CreditTemplate();
+            rules.setCardtypeId(16L);
+            rules.setCardholder("尊敬的[\\u4e00-\\u9fa5]+");
+            rules.setCycle("StatementCycle \\d{4}/\\d{2}/\\d{2}-\\d{4}/\\d{2}/\\d{2}");
+            rules.setBillDay("StatementDate \\d{4}-\\d{2}-\\d{2}");
+            rules.setDueDate("PaymentDueDate \\d{4}/\\d{2}/\\d{2}");
+            rules.setCredits("CreditLimit [a-zA-Z]+\\d+\\.?\\d*");
+            rules.setCash("CashAdvanceLimit [a-zA-Z]+\\d+\\.?\\d*");
+            rules.setCardNumbers("\\d+\\*{4}\\d{4}");
+            rules.setCurrentAmount("\\d+\\*{4}\\d{4} 人民币\\(CNY\\) \\d+\\.?\\d*");
+            rules.setMinimum("\\d+\\*{4}\\d{4} 人民币\\(CNY\\) \\d+\\.?\\d* \\d+\\.?\\d*");
+            rules.setDetails(
+                    "\\d{4}-\\d{2}-\\d{2} \\d{4}-\\d{2}-\\d{2} \\d{4}/?(\\d{4})? \\S+ [A-Za-z]+ -?\\d+\\.?\\d* [A-Za-z]+ -?\\d+\\.?\\d*");
+            rules.setTransactionDate("0");
+            rules.setBillingDate("1");
+            rules.setTransactionDescription("3");
+            rules.setTransactionCurrency("4");
+            rules.setTransactionAmount("5");
+            rules.setAccountableAmount("7");
+        }
+    }
+
+    @Override
+    protected void extractBillContent(AnalyzeParamsModel apm) {
+        String content = extractor.extract(apm.getOriginContent(), "font");
+        apm.setContent(content);
+
+    }
+
+    @Override
+    protected void setCardType() {
+        cardType = CardTypeEnum.CCB_LK_NEW;
+    }
+}

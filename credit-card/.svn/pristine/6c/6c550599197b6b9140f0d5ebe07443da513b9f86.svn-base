@@ -1,0 +1,89 @@
+package com.pay.card.model;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+import javax.persistence.Version;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+@MappedSuperclass
+public abstract class BaseEntity {
+
+    protected Long id;
+    @Transient
+    protected Long userId;
+
+    protected Date createDate;
+
+    protected Date updateDate;
+
+    private Integer status;
+
+    private Long version = 0L;
+
+    // updatable = false, insertable = false
+    @Column(name = "create_date")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
+    public Long getId() {
+        return id;
+    }
+
+    public Integer getStatus() {
+        return status;
+    }
+
+    // updatable = false, insertable = false
+    @Column(name = "update_date")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    @Transient
+    public Long getUserId() {
+        return userId;
+    }
+
+    @Version
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate == null ? new Date() : createDate;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+}

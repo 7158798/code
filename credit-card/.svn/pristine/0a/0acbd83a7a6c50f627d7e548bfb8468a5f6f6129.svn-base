@@ -1,0 +1,160 @@
+package com.pay.aile.bill.entity;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import com.baomidou.mybatisplus.activerecord.Model;
+import com.baomidou.mybatisplus.annotations.TableField;
+import com.baomidou.mybatisplus.annotations.TableId;
+import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.enums.FieldFill;
+import com.baomidou.mybatisplus.enums.IdType;
+
+/**
+ * <p>
+ * 帐户类型
+ * </p>
+ *
+ * @author yaoqiang.sun
+ * @since 2017-11-30
+ */
+@TableName("credit_error_log")
+public class CreditErrorLog extends Model<CreditErrorLog> {
+
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+    /**
+     * email
+     */
+    private String email;
+    /**
+     * 账单Id
+     */
+    @TableField("bill_id")
+    private Long billId;
+    /**
+     * 错误类型
+     */
+    @TableField("error_type")
+    private String errorType;
+    /**
+     * 错误信息
+     */
+    @TableField("error_msg")
+    private String errorMsg;
+    @TableField("bank_id")
+    private Long bankId;
+    @TableField("cardtype_id")
+    private Long cardtypeId;
+    /**
+     * 有效标志1有效0无效
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private Integer status;
+
+    /**
+     * 修改时间
+     */
+    @TableField(value = "update_date", fill = FieldFill.UPDATE)
+    private Date updateDate;
+
+    /**
+     * 创建时间
+     */
+    @TableField(value = "create_date", fill = FieldFill.INSERT)
+    private Date createDate;
+
+    public Long getBankId() {
+        return bankId;
+    }
+
+    public Long getBillId() {
+        return billId;
+    }
+
+    public Long getCardtypeId() {
+        return cardtypeId;
+    }
+
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    public String getErrorType() {
+        return errorType;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Integer getStatus() {
+        return status;
+    }
+
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setBankId(Long bankId) {
+        this.bankId = bankId;
+    }
+
+    public void setBillId(Long billId) {
+        this.billId = billId;
+    }
+
+    public void setCardtypeId(Long cardtypeId) {
+        this.cardtypeId = cardtypeId;
+    }
+
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setErrorMsg(String errorMsg) {
+        this.errorMsg = errorMsg;
+    }
+
+    public void setErrorType(String errorType) {
+        this.errorType = errorType;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    @Override
+    public String toString() {
+        return "CreditErrorLog [id=" + id + ", email=" + email + ", billId=" + billId + ", errorType=" + errorType
+                + ", errorMsg=" + errorMsg + ", bankId=" + bankId + ", cardtypeId=" + cardtypeId + ", status=" + status
+                + ", updateDate=" + updateDate + ", createDate=" + createDate + "]";
+    }
+
+    @Override
+    protected Serializable pkVal() {
+        return id;
+    }
+}

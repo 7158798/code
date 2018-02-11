@@ -1,0 +1,25 @@
+package com.pay.aile.bill.event;
+
+import org.springframework.context.ApplicationEvent;
+
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+
+public class AnalyzeStatusEvent extends ApplicationEvent {
+
+    /**
+     * @author chao.wang
+     */
+    private static final long serialVersionUID = 1762186639770623850L;
+
+    // private AnalyzeParamsModel apm;
+
+    public AnalyzeStatusEvent(AnalyzeParamsModel source) {
+        super(source);
+        // apm = source;
+    }
+
+    // public AnalyzeParamsModel getApm() {
+    // return apm;
+    // }
+
+}

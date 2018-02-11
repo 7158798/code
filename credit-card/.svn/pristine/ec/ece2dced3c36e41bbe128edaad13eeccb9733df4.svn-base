@@ -1,0 +1,28 @@
+package com.pay.aile.bill;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+/**
+ *
+ * @author syq
+ *
+ */
+@SpringBootApplication
+@EnableScheduling
+public class BillAnalyzeApplication {
+
+    public static void main(String[] args) {
+        // SpringApplication.run(BillAnalyzeApplication.class, args);
+        String content = "&lt;creditcard@service.pingan.com&gt;; 发送时间:2017年12月16日(星期六) 凌晨1:21 收件人:&lt;535442355@QQ.COM&gt;; 主题:平安信用卡电子账单 尊敬的巨天琪女士： 感谢您使用平安信用卡以下是您12月的信用卡对账单。 账户信息 本期账单日 2017-12-13 本期还款日 2018-01-01 信用额度 ¥39000.00 取现额度 ¥19500.00 本期账单信息 本期应还金额 本期最低应还金额 ¥26049.00 $0.00 ¥1302.45 $0.00 手机客户端还款|快捷还款|自动还款|网上还款|银行网点还款|便利网点还款|更多还款方式 积分账户 万里通积分 本期余额 本期新增 本期调整 即将失效 查看积分详情&gt; 119126 26048 0 5 平安银行在此温馨提醒您：按照《征信业管理条例》及人民银行的相关规定，您的用卡及还款情况，包括按时还款、逾期情况（如有）等信息，我行每月均会如实报送至中国人民银行征信中心的金融信用信息基础数据库。请按时足额还款（请至少还足最低还款额），以免影响到个人信用记录。 本期账务说明 本期应还金额NewBalance = 上期账单金额PreStatement - 上期还款金额PrePayment + 本期账单金额CurStatement - 本期调整金额CurAdjustment + 循环利息CycleInterest ¥26049.00 ¥25355.50 ¥25355.50 ¥26049.00 ¥0.00 ¥0.00 人民币账户交易明细RMBAccountTransactionDetail 交易种类Transtype 交易日期TransDate 记账日期PostedDate 交易说明Description 人民币金额RMBAmount 主卡MainCard 平安银行由你信用卡********2228 2017-11-26 2017-11-27 北京永昌兴顺五金商店 ¥13023.50 2017-11-26 2017-11-27 财付通还款 ¥-10000.00 2017-11-26 2017-11-27 财付通还款 ¥-5355.50 2017-11-26 2017-11-27 支付宝还款 ¥-10000.00 2017-12-01 2017-12-02 真确(北京)生物医药科技有限责任公 ¥13025.50 平安信用卡官网：http://creditcard.pingan.com 客服热线：95511-224小时贵宾服务专线：40088-95511 本邮件为平安产品动态及优惠信息订阅邮件定向发送给平安客户.如果您不想再收到平安公司的产品动态及优惠信息请退订 如有任何疑问，您可以拨打我们的全国统一服务电话95511-2或联系我们";
+        String reg = "本期最低应还金额 \\d+\\.?\\d*";
+        Pattern pattern = Pattern.compile(reg);
+        Matcher matcher = pattern.matcher(content);
+        while (matcher.find()) {
+            System.out.println(matcher.group(0));
+        }
+    }
+}

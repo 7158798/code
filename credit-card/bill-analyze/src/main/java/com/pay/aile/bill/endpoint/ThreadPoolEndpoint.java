@@ -1,0 +1,184 @@
+package com.pay.aile.bill.endpoint;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import org.springframework.boot.actuate.endpoint.AbstractEndpoint;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.stereotype.Component;
+
+import com.pay.aile.bill.endpoint.ThreadPoolEndpoint.ThreadPoolInfo;
+import com.pay.aile.bill.utils.SpringContextUtil;
+
+@Component
+public class ThreadPoolEndpoint extends AbstractEndpoint<List<ThreadPoolInfo>> {
+
+    class ThreadPoolInfo {
+
+        private String poolName;
+        private String status;
+        private int coreSize;
+        private int maxSize;
+        private int activeCount;
+        private int largestSize;
+        private long completedSize;
+        private int remainingCompacity;
+        private int queueingCount;
+        private boolean allowCoreThreadTimeOut;
+        private int coreThreadTimeOut;
+        private int keepAliveSeconds;
+        private boolean isDeamon;
+
+        public int getActiveCount() {
+            return activeCount;
+        }
+
+        public long getCompletedSize() {
+            return completedSize;
+        }
+
+        public int getCoreSize() {
+            return coreSize;
+        }
+
+        public int getCoreThreadTimeOut() {
+            return coreThreadTimeOut;
+        }
+
+        public int getKeepAliveSeconds() {
+            return keepAliveSeconds;
+        }
+
+        public int getLargestSize() {
+            return largestSize;
+        }
+
+        public int getMaxSize() {
+            return maxSize;
+        }
+
+        public String getPoolName() {
+            return poolName;
+        }
+
+        public int getQueueingCount() {
+            return queueingCount;
+        }
+
+        public int getRemainingCompacity() {
+            return remainingCompacity;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public boolean isAllowCoreThreadTimeOut() {
+            return allowCoreThreadTimeOut;
+        }
+
+        public boolean isDeamon() {
+            return isDeamon;
+        }
+
+        public void setActiveCount(int activeCount) {
+            this.activeCount = activeCount;
+        }
+
+        public void setAllowCoreThreadTimeOut(boolean allowCoreThreadTimeOut) {
+            this.allowCoreThreadTimeOut = allowCoreThreadTimeOut;
+        }
+
+        public void setCompletedSize(long completedSize) {
+            this.completedSize = completedSize;
+        }
+
+        public void setCoreSize(int coreSize) {
+            this.coreSize = coreSize;
+        }
+
+        public void setCoreThreadTimeOut(int coreThreadTimeOut) {
+            this.coreThreadTimeOut = coreThreadTimeOut;
+        }
+
+        public void setDeamon(boolean isDeamon) {
+            this.isDeamon = isDeamon;
+        }
+
+        public void setKeepAliveSeconds(int keepAliveSeconds) {
+            this.keepAliveSeconds = keepAliveSeconds;
+        }
+
+        public void setLargestSize(int largestSize) {
+            this.largestSize = largestSize;
+        }
+
+        public void setMaxSize(int maxSize) {
+            this.maxSize = maxSize;
+        }
+
+        public void setPoolName(String poolName) {
+            this.poolName = poolName;
+        }
+
+        public void setQueueingCount(int queueingCount) {
+            this.queueingCount = queueingCount;
+        }
+
+        public void setRemainingCompacity(int remainingCompacity) {
+            this.remainingCompacity = remainingCompacity;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        @Override
+        public String toString() {
+            return "ThreadPoolInfo [poolName=" + poolName + ", status=" + status + ", coreSize=" + coreSize
+                    + ", maxSize=" + maxSize + ", activeCount=" + activeCount + ", largestSize=" + largestSize
+                    + ", completedSize=" + completedSize + ", remainingCompacity=" + remainingCompacity
+                    + ", queueingCount=" + queueingCount + ", allowCoreThreadTimeOut=" + allowCoreThreadTimeOut
+                    + ", coreThreadTimeOut=" + coreThreadTimeOut + ", keepAliveSeconds=" + keepAliveSeconds
+                    + ", isDeamon=" + isDeamon + "]";
+        }
+
+    }
+
+    public ThreadPoolEndpoint() {
+        super("threadPool");
+    }
+
+    public ThreadPoolEndpoint(String id) {
+        super("threadPool");
+    }
+
+    @Override
+    public List<ThreadPoolInfo> invoke() {
+        List<ThreadPoolInfo> infos = new ArrayList<>();
+        Map<String, ThreadPoolTaskExecutor> pools = SpringContextUtil.getApplicationContext()
+                .getBeansOfType(ThreadPoolTaskExecutor.class);
+        pools.entrySet().stream().forEach(entry -> {
+            String poolName = entry.getKey();
+            ThreadPoolTaskExecutor pool = entry.getValue();
+            ThreadPoolExecutor executor = pool.getThreadPoolExecutor();
+            ThreadPoolInfo poolInfo = new ThreadPoolInfo();
+            poolInfo.setPoolName(poolName);
+            poolInfo.setCoreSize(executor.getCorePoolSize());
+            poolInfo.setMaxSize(executor.getMaximumPoolSize());
+            poolInfo.setActiveCount(executor.getActiveCount());
+            poolInfo.setStatus(executor.isShutdown() ? "DOWN" : "UP");
+            poolInfo.setCompletedSize(executor.getCompletedTaskCount());
+            poolInfo.setLargestSize(executor.getLargestPoolSize());
+            poolInfo.setRemainingCompacity(executor.getQueue().remainingCapacity());
+            poolInfo.setQueueingCount(executor.getQueue().size());
+            poolInfo.setDeamon(pool.isDaemon());
+            poolInfo.setAllowCoreThreadTimeOut(executor.allowsCoreThreadTimeOut());
+            poolInfo.setKeepAliveSeconds(pool.getKeepAliveSeconds());
+            infos.add(poolInfo);
+        });
+        return infos;
+    }
+}

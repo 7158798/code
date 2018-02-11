@@ -1,0 +1,9 @@
+package com.pay.card.service;
+
+import com.pay.card.model.CreditSet;
+
+public interface CreditSetService {
+    public CreditSet findCreditSet(CreditSet creditSet);
+
+    public CreditSet saveOrUpdate(CreditSet creditSet);
+}

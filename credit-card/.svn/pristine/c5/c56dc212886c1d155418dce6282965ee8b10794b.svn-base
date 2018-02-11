@@ -1,0 +1,96 @@
+
+/**
+* @Title: CreditEmailController.java
+* @Package com.pay.card.api
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年12月15日
+* @version V1.0
+*/
+
+package com.pay.card.api;
+
+import java.util.List;
+import java.util.concurrent.Callable;
+
+import org.apache.http.client.methods.HttpGet;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.async.WebAsyncTask;
+
+import com.pay.card.bean.CreditCardBean;
+import com.pay.card.interceptor.BaseResolverInterceptor;
+import com.pay.card.interceptor.CardResolverInterceptor;
+import com.pay.card.model.CreditEmail;
+import com.pay.card.service.CreditUserEmailRelationService;
+import com.pay.card.view.JsonResultView;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import springfox.documentation.annotations.ApiIgnore;
+
+/**
+ * @ClassName: CreditEmailController
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年12月15日
+ *
+ */
+@Api("信用卡账单 API")
+@RestController
+@RequestMapping("/api/v1/amail")
+public class CreditEmailController extends BaseController {
+    @Autowired
+    private CreditUserEmailRelationService creditUserEmailRelationService;
+
+    @ApiOperation(value = "查询邮件列表", httpMethod = HttpGet.METHOD_NAME, notes = "查询邮件列表")
+    @ApiImplicitParams({
+
+            @ApiImplicitParam(paramType = "query", name = "customerNo", dataType = "String", required = true, value = "商户编号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "channel", dataType = "String", required = true, value = "渠道", defaultValue = "1001"),
+            @ApiImplicitParam(paramType = "query", name = "phoneNo", dataType = "String", required = true, value = "商户手机号", defaultValue = "123456789") })
+    @RequestMapping(value = "/findEmail", method = RequestMethod.GET)
+    @SuppressWarnings("rawtypes")
+    public WebAsyncTask<JsonResultView> findEmail(@CardResolverInterceptor @ApiIgnore CreditCardBean cardBean) {
+        Callable<JsonResultView> callable = new Callable<JsonResultView>() {
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public JsonResultView call() throws Exception {
+
+                List<CreditEmail> emailList = creditUserEmailRelationService.findEmailByUser(cardBean.getUserId());
+                return new JsonResultView().setObject(emailList);
+
+            }
+        };
+        return new WebAsyncTask<JsonResultView>(callable);
+    }
+
+    @ApiOperation(value = "解除邮件绑定", httpMethod = HttpGet.METHOD_NAME, notes = "解除邮件绑定")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "customerNo", dataType = "String", required = true, value = "商户编号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "channel", dataType = "String", required = true, value = "渠道", defaultValue = "1001"),
+            @ApiImplicitParam(paramType = "query", name = "phoneNo", dataType = "String", required = true, value = "商户手机号", defaultValue = "123456789"),
+            @ApiImplicitParam(paramType = "query", name = "emailId", dataType = "String", required = true, value = "邮箱id", defaultValue = "xxx@qq.com") })
+    @RequestMapping(value = "/findEmail", method = RequestMethod.GET)
+    @SuppressWarnings("rawtypes")
+    public WebAsyncTask<JsonResultView> unbindEmail(@BaseResolverInterceptor @ApiIgnore Long userId,
+            @ApiIgnore Long emailId) {
+        Callable<JsonResultView> callable = new Callable<JsonResultView>() {
+
+            @Override
+            public JsonResultView call() throws Exception {
+
+                unbindEmail(userId, emailId);
+                return new JsonResultView();
+
+            }
+        };
+        return new WebAsyncTask<JsonResultView>(callable);
+    }
+
+}

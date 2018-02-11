@@ -1,0 +1,50 @@
+package com.pay.card.model;
+
+import java.io.Serializable;
+
+import javax.persistence.Entity;
+import javax.persistence.Table;
+
+@Table(name = "credit_channel")
+@Entity
+public class CreditChannel extends BaseEntity implements Serializable {
+
+    private static final long serialVersionUID = -1798677921402802358L;
+    /**
+     * 渠道号
+     */
+    private Long interfaceCode;
+    /**
+     * 渠道名称
+     */
+    private String interfaceName;
+    /**
+     * 是否同步
+     */
+    private String isSynchronization;
+
+    public Long getInterfaceCode() {
+        return interfaceCode;
+    }
+
+    public String getInterfaceName() {
+        return interfaceName;
+    }
+
+    public String getIsSynchronization() {
+        return isSynchronization;
+    }
+
+    public void setInterfaceCode(Long interfaceCode) {
+        this.interfaceCode = interfaceCode;
+    }
+
+    public void setInterfaceName(String interfaceName) {
+        this.interfaceName = interfaceName;
+    }
+
+    public void setIsSynchronization(String isSynchronization) {
+        this.isSynchronization = isSynchronization;
+    }
+
+}

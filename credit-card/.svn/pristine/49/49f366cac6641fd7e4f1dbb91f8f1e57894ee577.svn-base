@@ -1,0 +1,12 @@
+package com.pay.aile.bill.analyze.banktemplate.abc;
+
+import com.pay.aile.bill.analyze.BankMailAnalyzerTemplate;
+import com.pay.aile.bill.analyze.banktemplate.BaseBankTemplate;
+
+/**
+ *
+ * @author Charlie
+ * @description 农业银行解析模板
+ */
+public interface AbstractABCTemplate extends BankMailAnalyzerTemplate<BaseBankTemplate> {
+}

@@ -1,0 +1,124 @@
+package com.pay.aile.bill.entity;
+
+import java.io.Serializable;
+
+import com.baomidou.mybatisplus.activerecord.Model;
+import com.baomidou.mybatisplus.annotations.TableField;
+import com.baomidou.mybatisplus.annotations.TableId;
+import com.baomidou.mybatisplus.annotations.TableName;
+import com.baomidou.mybatisplus.enums.IdType;
+
+@TableName("credit_user_email_relation")
+public class CreditUserEmailRelation extends Model<CreditCard> {
+
+    private static final long serialVersionUID = -2581661263839893105L;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+    @TableField("user_id")
+    private Long userId;
+    @TableField("email_id")
+    private Long eamilId;
+    /**
+     * 是否支持ssl 0 不 支持1 支持
+     */
+    private Integer ssl;
+    /**
+     * 邮箱服务器
+     */
+    private String server;
+    /**
+     * 邮箱服务器端口
+     */
+    private Integer port;
+
+    public Long getEamilId() {
+        return eamilId;
+    }
+
+    /**
+     * @return id
+     */
+
+    public Long getId() {
+        return id;
+    }
+
+    /**
+     * @return port
+     */
+
+    public Integer getPort() {
+        return port;
+    }
+
+    /**
+     * @return server
+     */
+
+    public String getServer() {
+        return server;
+    }
+
+    /**
+     * @return ssl
+     */
+
+    public Integer getSsl() {
+        return ssl;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setEamilId(Long eamilId) {
+        this.eamilId = eamilId;
+    }
+
+    /**
+     * @param id
+     *            the id to set
+     */
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    /**
+     * @param port
+     *            the port to set
+     */
+
+    public void setPort(Integer port) {
+        this.port = port;
+    }
+
+    /**
+     * @param server
+     *            the server to set
+     */
+
+    public void setServer(String server) {
+        this.server = server;
+    }
+
+    /**
+     * @param ssl
+     *            the ssl to set
+     */
+
+    public void setSsl(Integer ssl) {
+        this.ssl = ssl;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    @Override
+    protected Serializable pkVal() {
+        // TODO Auto-generated method stub
+        return id;
+    }
+
+}

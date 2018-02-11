@@ -1,0 +1,93 @@
+package com.pay.card.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.pay.card.Constants;
+import com.pay.card.model.CreditSet;
+
+@Repository
+public class StatisticsDao {
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    /**
+     * 查询还款状态
+     *
+     * @param page
+     * @param num
+     * @return
+     */
+    public List<Map<String, Object>> findCreditBillStatusList(Integer page, Integer num) {
+        Integer pend = (page - 1) * num;
+        StringBuffer sql = new StringBuffer(
+                "select cb.id billId,cui.customer_no customerNo,cb.year year,cb.month month,cb.current_amount<=cb.repayment isPayOff from credit_bill cb ");
+        sql.append("left join credit_user_bill_relation cubr on cb.id=cubr.bill_Id ");
+        sql.append("left join credit_user_info cui on cubr.user_Id=cui.id ");
+        sql.append(" where cubr.status=1 ");
+        sql.append("limit ").append(pend).append(",").append(num);
+        return jdbcTemplate.queryForList(sql.toString());
+    }
+
+    /**
+     * 分页查询账单解析记录
+     */
+    public List<Map<String, Object>> findCreditFileList(Integer page) {
+        StringBuffer sql = new StringBuffer(
+                "SELECT cf.process_result reuslt,cf.create_date createDate,ur.user_id userId,ui.customer_no customerNo,cb.id as billId");
+        sql.append(" FROM credit_file cf");
+        sql.append(" LEFT JOIN credit_user_file_relation ur ON ur.file_id=cf.id");
+        sql.append(" LEFT JOIN credit_user_info ui ON ui.id = ur.user_id");
+        sql.append(" LEFT JOIN credit_bill cb ON cb.file_id = cf.id");
+        sql.append(" WHERE 1=1 LIMIT ?,?");
+
+        Integer pend = page * Constants.PAGE_SIZE;
+        Integer pstart = pend - Constants.PAGE_SIZE;
+        return jdbcTemplate.queryForList(sql.toString(), pstart, pend);
+    }
+
+    /**
+     * 查询信用卡信息
+     *
+     * @param page
+     * @param num
+     * @return
+     */
+    public List<Map<String, Object>> findCreditInfoList(Integer page, Integer num) {
+        Integer pend = (page - 1) * num;
+        StringBuffer sql = new StringBuffer(
+                "select cc.id cardId,cui.customer_no customerNo,cc.numbers cardNo,cb.name name,");
+        sql.append("DATE_FORMAT(cc.create_date,'%Y-%m-%d %H:%i:%s') createDate,cc.source source, ");
+        sql.append("DATE_FORMAT(if(cc.status>0,null,cc.update_date),'%Y-%m-%d %H:%i:%s') deleteDate,cc.status status ");
+        sql.append("from credit_card cc left join credit_user_card_relation cucr on cc.id=cucr.card_Id ");
+        sql.append("left join credit_user_info cui on cucr.user_Id=cui.id ");
+        sql.append("left join credit_bank cb on cc.bank_id= cb.id where cucr.status=1 ");
+        sql.append("limit ").append(pend).append(",").append(num);
+
+        System.out.println(sql.toString());
+        return jdbcTemplate.queryForList(sql.toString());
+    }
+
+    /**
+     * 分页查询提醒设置
+     *
+     * @param creditSet
+     * @param page
+     * @return
+     */
+    public List<Map<String, Object>> findCreditSetList(CreditSet creditSet, Integer page) {
+        StringBuffer sql = new StringBuffer("SELECT cs.user_id userId,cs.billday_reminder billdayReminder,");
+        sql.append("cs.out_bill_reminder outBillReminder,cs.repayment_reminder repaymentReminder,");
+        sql.append("cs.overdue_reminder overdueReminder,cui.customer_no customerNo");
+        sql.append(" FROM credit_set cs LEFT JOIN credit_user_info cui on cui.id=cs.user_id");
+        sql.append(" WHERE 1=1 LIMIT ?,?");
+
+        Integer pend = page * Constants.PAGE_SIZE;
+        Integer pstart = pend - Constants.PAGE_SIZE;
+        return jdbcTemplate.queryForList(sql.toString(), pstart, pend);
+    }
+}

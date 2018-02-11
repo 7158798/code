@@ -1,0 +1,87 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditSetDao;
+import com.pay.card.dao.CreditUserInfoDao;
+import com.pay.card.enums.ChannelEnum;
+import com.pay.card.enums.StatusEnum;
+import com.pay.card.model.CreditSet;
+import com.pay.card.model.CreditUserInfo;
+import com.pay.card.service.CreditUserInfoService;
+
+@Service
+public class CreditUserInfoServiceImpl implements CreditUserInfoService {
+
+    @Autowired
+    private CreditUserInfoDao creditUserInfoDao;
+    @Autowired
+    private CreditSetDao creditSetDao;
+
+    @Override
+    public CreditUserInfo findCreditUserInfo(CreditUserInfo creditUserInof) throws Exception {
+
+        return creditUserInfoDao.findOne(getSpecification(creditUserInof));
+    }
+
+    @Override
+    public List<CreditUserInfo> findCreditUserInfoAll() throws Exception {
+
+        return creditUserInfoDao.findAll();
+    }
+
+    @Override
+    // @Transactional
+    public Long saveCreditUserInfo(CreditUserInfo creditUserInfo) throws Exception {
+        creditUserInfoDao.saveAndFlush(creditUserInfo);
+        CreditSet set = getDefaultSet();
+        set.setUserInfo(creditUserInfo);
+        creditSetDao.save(set);
+        return creditUserInfo.getId();
+    }
+
+    private CreditSet getDefaultSet() {
+        CreditSet set = new CreditSet();
+        // 默认当天10点提醒
+        set.setAdvanceDay(0);
+        set.setTimes(10);
+        set.setCreateDate(new Date());
+        set.setOutBillReminder(1);
+        set.setBilldayReminder(1);
+        set.setOverdueReminder(1);
+        set.setRepaymentReminder(1);
+        set.setStatus(StatusEnum.ENABLE.getStatus());
+        return set;
+    }
+
+    private Specification<CreditUserInfo> getSpecification(CreditUserInfo creditUserInof) {
+        return new Specification<CreditUserInfo>() {
+            @Override
+            public Predicate toPredicate(Root<CreditUserInfo> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+                if (ChannelEnum.MPOS.getCode().equals(creditUserInof.getChannel())) {
+                    list.add(cb.equal(root.get("phoneNo").as(String.class), creditUserInof.getPhoneNo()));
+                }
+                if (ChannelEnum.POS.getCode().equals(creditUserInof.getChannel())) {
+                    list.add(cb.equal(root.get("customerNo").as(String.class), creditUserInof.getCustomerNo()));
+                }
+                list.add(cb.equal(root.get("channel").as(String.class), creditUserInof.getChannel()));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+        };
+
+    }
+
+}

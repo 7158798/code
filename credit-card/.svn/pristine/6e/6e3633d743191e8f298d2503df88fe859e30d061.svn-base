@@ -1,0 +1,47 @@
+
+/**
+* @Title: CreditUserEmailRelationServiceImpl.java
+* @Package com.pay.aile.bill.service.impl
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年11月30日
+* @version V1.0
+*/
+
+package com.pay.aile.bill.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.pay.aile.bill.entity.CreditUserEmailRelation;
+import com.pay.aile.bill.mapper.CreditUserEmailRelationMapper;
+import com.pay.aile.bill.service.CreditUserEmailRelationService;
+
+/**
+ * @ClassName: CreditUserEmailRelationServiceImpl
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年11月30日
+ *
+ */
+@Service
+public class CreditUserEmailRelationServiceImpl implements CreditUserEmailRelationService {
+    @Autowired
+    private CreditUserEmailRelationMapper creditUserEmailRelationMapper;
+
+    public CreditUserEmailRelation findByUser(String userId) {
+        CreditUserEmailRelation relation = new CreditUserEmailRelation();
+        relation.setUserId(new Long(userId));
+        relation = creditUserEmailRelationMapper.selectOne(relation);
+        return relation;
+    }
+
+    /**
+     * 保存
+     */
+    @Override
+    public CreditUserEmailRelation saveOrUpdate(CreditUserEmailRelation relation) {
+        creditUserEmailRelationMapper.insert(relation);
+        return relation;
+    }
+}

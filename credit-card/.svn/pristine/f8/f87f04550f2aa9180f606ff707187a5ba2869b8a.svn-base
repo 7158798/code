@@ -1,0 +1,13 @@
+package com.pay.aile.bill.analyze.banktemplate.ceb;
+
+import com.pay.aile.bill.analyze.BankMailAnalyzerTemplate;
+
+
+/**
+ *
+ * @author Charlie
+ * @description 光大银行抽象解析模板
+ */
+public interface AbstractCEBTemplate extends BankMailAnalyzerTemplate {
+
+}

@@ -1,0 +1,18 @@
+package com.pay.card.service;
+
+import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.pay.card.BaseTest;
+
+public class CreditBillServiceImplTest extends BaseTest {
+
+    @Autowired
+    private CreditBillService creditBillService;
+
+    @Test
+    public void updateStatusTest() {
+        // creditBillService.updateBillStatusById(2406l);
+    }
+
+}

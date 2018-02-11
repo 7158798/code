@@ -1,0 +1,35 @@
+
+/**
+* @Title: TaskExecutionResultServiceImpl.java
+* @Package com.pay.card.service.impl
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年12月20日
+* @version V1.0
+*/
+
+package com.pay.card.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.TaskExecutionResultDao;
+import com.pay.card.model.TaskExecutionResult;
+import com.pay.card.service.TaskExecutionResultService;
+
+/**
+ * @ClassName: TaskExecutionResultServiceImpl
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年12月20日
+ *
+ */
+@Service
+public class TaskExecutionResultServiceImpl implements TaskExecutionResultService {
+    @Autowired
+    private TaskExecutionResultDao taskExecutionResultDao;
+
+    public void save(TaskExecutionResult result) {
+        taskExecutionResultDao.saveAndFlush(result);
+    }
+}

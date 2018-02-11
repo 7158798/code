@@ -1,0 +1,17 @@
+spring.application.name=bill-analyze
+server.port=8083
+server.context-path=/bill-analyze
+
+environment.production
+mongodb.dataSourceName=mdb_credit
+
+primary.datasource.dsname=mdb_credit_rw
+
+#redis config
+redis.host=10.10.111.125:6373;10.10.111.126:6373;10.10.111.127:6373
+redis.password=redis
+redis.masterName=mymaster
+redis.dbIndex=0
+
+#redis.alone=1
+redis.sentinel=1

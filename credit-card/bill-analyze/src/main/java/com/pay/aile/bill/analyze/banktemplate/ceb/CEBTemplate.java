@@ -1,0 +1,159 @@
+package com.pay.aile.bill.analyze.banktemplate.ceb;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.analyze.MailContentExtractor;
+import com.pay.aile.bill.analyze.banktemplate.BaseBankSeparateStringTemplate;
+import com.pay.aile.bill.contant.Constant;
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditBillDetail;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.utils.DateUtil;
+import com.pay.aile.bill.utils.PatternMatcherUtil;
+
+/**
+ *
+ * @author Charlie
+ * @description 光大银行信用卡账单内容解析模板
+ */
+@Service
+public class CEBTemplate extends BaseBankSeparateStringTemplate implements AbstractCEBTemplate {
+    @Resource
+    private MailContentExtractor pdfExtractor;
+
+    @Override
+    public void initRules() {
+        super.initRules();
+        if (rules == null) {
+            rules = new CreditTemplate();
+            rules.setCardtypeId(11L);
+            rules.setCardholder("[\\u4e00-\\u9fa5]+\\(收\\)");
+            rules.setBillDay("账单日 \\d{4}/\\d{2}/\\d{2}");
+            rules.setYearMonth("账单日 \\d{4}/\\d{2}/\\d{2}");
+            rules.setDueDate("到期还款日 \\d{4}/\\d{2}/\\d{2}");
+            rules.setCredits("信用额度 \\d+\\.?\\d*");
+            rules.setCardNumbers("\\d+\\*{4}\\d{4} \\d+\\.?\\d* \\d+\\.?\\d* \\d+\\.?\\d*");
+            rules.setCurrentAmount("\\d+\\*{4}\\d{4} \\d+\\.?\\d* \\d+\\.?\\d*");
+            rules.setMinimum("\\d+\\*{4}\\d{4} \\d+\\.?\\d* \\d+\\.?\\d* \\d+\\.?\\d*");
+            rules.setIntegral("本期积分余额 \\d+\\.?\\d*");
+            rules.setDetails("\\d{4}/\\d{2}/\\d{2} \\d{4}/\\d{2}/\\d{2} \\d{4} .*\\n");
+        }
+    }
+
+    @Override
+    protected void analyzeCardholder(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCardholder())) {
+            String cardholder = getValueByPattern("cardholder", content, rules.getCardholder(), apm, "");
+            final String finalCardholder = cardholder.replaceAll("\\(收\\)|\\s+", "");
+            cardList.forEach(card -> {
+                card.setCardholder(finalCardholder);
+            });
+        }
+    }
+
+    @Override
+    protected void analyzeCardNo(List<CreditCard> cardList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCardNumbers())) {
+            Exception error = null;
+            try {
+                Integer.valueOf(rules.getCardNumbers());
+            } catch (Exception e) {
+                error = e;
+            }
+            if (error != null) {
+                List<String> cardNos = getValueListByPattern("cardNumbers", content, rules.getCardNumbers(), "");
+                if (!cardNos.isEmpty()) {
+                    for (int i = 0; i < cardNos.size(); i++) {
+                        String cardNo = cardNos.get(i).split(" ")[0];
+                        if (StringUtils.hasText(cardNo)) {
+                            cardNo = cardNo.replaceAll("-", "");
+                        }
+                        CreditCard card = new CreditCard();
+                        card.setNumbers(cardNo);
+                        if (!cardList.contains(card)) {
+                            cardList.add(card);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void analyzeYearMonth(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getYearMonth())) {
+            String yearMonth = getValueByPattern("yearMonth", content, rules.getYearMonth(), apm, "");
+            yearMonth = StringUtils.collectionToDelimitedString(PatternMatcherUtil.getMatcher("\\d+", yearMonth), "");
+            if (StringUtils.hasText(yearMonth)) {
+                String year = yearMonth.substring(0, 4);
+                String month = yearMonth.substring(4, 6);
+                billList.forEach(bill -> {
+                    bill.setYear(year);
+                    bill.setMonth(month);
+                });
+            }
+        }
+    }
+
+    @Override
+    protected void beforeAnalyze(AnalyzeParamsModel apm) {
+        String content = apm.getContent();
+        if (StringUtils.hasText(content)) {
+            content = content.replaceAll("([\\u4e00-\\u9fa5]+) +(\\()", "$1$2");// 去掉中文与(之间空格
+            content = content.replaceAll("(\\(\\S+) +(\\S*\\))", "$1$2");// 去掉()中的空格
+            content = content.replaceAll("\\(存入\\)", " -");
+            apm.setContent(content);
+        }
+    }
+
+    @Override
+    protected void extractBillContent(AnalyzeParamsModel apm) {
+        String content = pdfExtractor.extract(apm.getAttachment());
+        apm.setContent(content);
+    }
+
+    @Override
+    protected int indexOfCardDetail(String content, String cardNo) {
+        return content.indexOf("账号  Account Number：" + cardNo);
+    }
+
+    @Override
+    protected void setCardType() {
+        cardType = CardTypeEnum.CEB_DEFAULT;
+    }
+
+    @Override
+    protected CreditBillDetail setCreditBillDetail(String detail) {
+        detail = detail.replaceAll("\\n", "");
+        CreditBillDetail cbd = new CreditBillDetail();
+        String[] sa = detail.split(" ");
+        cbd.setTransactionDate(DateUtil.parseDate(sa[0]));
+        cbd.setBillingDate(DateUtil.parseDate(sa[1]));
+        cbd.setTransactionAmount(sa[sa.length - 1]);
+        String desc = "";
+        for (int i = 3; i < sa.length - 1; i++) {
+            desc = desc + sa[i];
+        }
+        cbd.setTransactionDescription(desc);
+        return cbd;
+    }
+
+    @Override
+    protected void setForeignCurrency(List<CreditBill> billList, AnalyzeParamsModel apm) {
+        String originalContent = apm.getAttachment();
+        String result = PatternMatcherUtil.getMatcherString(Constant.FOREIGN_CURRENCY, originalContent);
+        int status = StringUtils.hasText(result) ? 1 : 0;
+        billList.forEach(bill -> {
+            bill.setForeignCurrency(status);
+        });
+    }
+
+}

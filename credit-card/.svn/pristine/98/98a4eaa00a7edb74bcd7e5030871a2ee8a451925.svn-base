@@ -1,0 +1,59 @@
+package com.pay.card.utils;
+
+import java.util.Collections;
+import java.util.Set;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.stereotype.Component;
+
+import com.github.phantomthief.model.builder.ModelBuilder;
+import com.github.phantomthief.model.builder.impl.SimpleModelBuilder;
+import com.github.phantomthief.view.mapper.ViewMapper;
+import com.github.phantomthief.view.mapper.impl.DefaultViewMapperImpl;
+import com.pay.card.model.CreditCard;
+import com.pay.card.view.AnalysisResultView;
+import com.pay.card.web.context.AnalysisBuildContext;
+
+@Component
+public class AnalysisHelper {
+
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory
+            .getLogger(AnalysisHelper.class);
+    private static final String VIEW_PATH = "com.pay.card.view";
+
+    public static final ViewMapper scan(String pkg, Set<Class<?>> ignoreViews) {
+        DefaultViewMapperImpl viewMapper = new DefaultViewMapperImpl();
+
+        viewMapper.addMapper(CreditCard.class,
+                (analysisBuildContext, creditcard) -> new AnalysisResultView(creditcard,
+                        (AnalysisBuildContext) analysisBuildContext));
+
+        return viewMapper;
+    }
+
+    private SimpleModelBuilder<AnalysisBuildContext> analysisModelBuilder;
+
+    private ViewMapper viewMapper;
+
+    private AnalysisBuildContext analysisBuildContext;
+
+    public AnalysisBuildContext getAnalysisBuildContext() {
+        return analysisBuildContext;
+    }
+
+    public ModelBuilder<AnalysisBuildContext> getAnalysisModelBuilder() {
+        return analysisModelBuilder;
+    }
+
+    public ViewMapper getViewMapper() {
+        return viewMapper;
+    }
+
+    @PostConstruct
+    private void init() {
+        viewMapper = scan(VIEW_PATH, Collections.emptySet());
+        analysisBuildContext = new AnalysisBuildContext();
+        analysisModelBuilder = new SimpleModelBuilder<AnalysisBuildContext>();
+    }
+}

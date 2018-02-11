@@ -1,0 +1,249 @@
+package com.pay.aile.bill.utils;
+
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Calendar;
+import java.util.Date;
+
+/**
+ *
+ * @author Charlie
+ * @description
+ */
+public class DateUtil {
+    private static final String defaultDatePattern = "yyyy-MM-dd";
+
+    public static LocalDate dateToLocalDate(Date date) {
+
+        Instant instant = date.toInstant();
+        ZoneId zone = ZoneId.systemDefault();
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, zone);
+        LocalDate localDate = localDateTime.toLocalDate();
+
+        return localDate;
+    }
+
+    /**
+     * 格式化日期yyyy-MM-dd
+     *
+     * @param date
+     * @return
+     */
+    public static String formatDate(Date date) {
+        if (date == null) {
+            return null;
+        }
+        return new SimpleDateFormat(defaultDatePattern).format(date);
+    }
+
+    /**
+     *
+     * @Description 根据账单的月份和当前程序执行的月份推导出账单的年
+     * @param month
+     * @return
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    public static String getBillYearByMonth(String month) {
+        int billMonth = Integer.valueOf(month);
+        Calendar c = Calendar.getInstance();
+        int nowMonth = c.get(Calendar.MONTH) + 1;
+        int year = c.get(Calendar.YEAR);
+        if (nowMonth < billMonth) {
+            year--;
+        }
+        return String.valueOf(year);
+    }
+
+    public static Date getDate(int year, int month, int dayOfMonth) {
+        LocalDate date = LocalDate.of(year, month, dayOfMonth);
+        return localDateToDate(date);
+
+    }
+
+    /**
+     *
+     * @Description 获取给定的日期的制定字段的值
+     * @param date
+     * @param field
+     * @return
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    public static String getDateField(Date date, int field) {
+        Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        int value = c.get(field);
+        if (field == Calendar.MONTH) {
+            value++;
+        }
+        if (value < 10) {
+            return "0" + String.valueOf(value);
+        } else {
+            return String.valueOf(value);
+        }
+    }
+
+    public static LocalDate getDueDate(int bill, int due, LocalDate billDate, int freeInterestPeriod) {
+
+        // 年
+        int year = billDate.getYear();
+        // 月
+        int month = billDate.getMonthValue();
+        LocalDate dueDate = null;
+        // 固定还款日
+        if (freeInterestPeriod == 0) {
+            dueDate = LocalDate.of(year, month, due);
+            // 账单日大于还款日
+            if (bill > due) {
+                dueDate = dueDate.plusMonths(1);
+            }
+        } else {
+            // 获取账单日
+            dueDate = billDate.plusDays(freeInterestPeriod);
+        }
+
+        return dueDate;
+    }
+
+    /**
+     * 获得上个月的今天
+     */
+    public static Date getLastMonth(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.MONTH, -1);
+        return calendar.getTime();
+    }
+
+    /**
+     * 获得dt当天最大时间
+     *
+     * @param dt
+     * @return
+     */
+    public static Date getMaxTime(Date dt) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(dt);
+        ca.set(Calendar.HOUR_OF_DAY, ca.getActualMaximum(Calendar.HOUR_OF_DAY));
+        ca.set(Calendar.MINUTE, ca.getActualMaximum(Calendar.MINUTE));
+        ca.set(Calendar.SECOND, ca.getActualMaximum(Calendar.SECOND));
+
+        return ca.getTime();
+    }
+
+    /**
+     * 获得dt当天最小时间
+     *
+     * @param dt
+     * @return
+     */
+    public static Date getMinTime(Date dt) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(dt);
+        ca.set(Calendar.HOUR_OF_DAY, ca.getActualMinimum(Calendar.HOUR_OF_DAY));
+        ca.set(Calendar.MINUTE, ca.getActualMinimum(Calendar.MINUTE));
+        ca.set(Calendar.SECOND, ca.getActualMinimum(Calendar.SECOND));
+
+        return ca.getTime();
+    }
+
+    /**
+     * 获得本月里的第day天,
+     *
+     * @param date指定日期
+     * @param day第几天，必须要大于1，小于1计算值无意义
+     * @return 返回日期的最小时间
+     */
+    public static Date getMonthDay(Date date, Integer day) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMinimum(Calendar.DAY_OF_MONTH));
+        calendar.set(Calendar.HOUR_OF_DAY, calendar.getActualMinimum(Calendar.HOUR_OF_DAY));
+        calendar.set(Calendar.MINUTE, calendar.getActualMinimum(Calendar.MINUTE));
+        calendar.set(Calendar.SECOND, calendar.getActualMinimum(Calendar.SECOND));
+
+        calendar.add(Calendar.DAY_OF_MONTH, day - 1);
+        return calendar.getTime();
+    }
+
+    /**
+     * 获得某个日期一个月后的日期
+     *
+     * @return
+     */
+    public static Date getNextMonth(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.MONTH, 1);
+        return calendar.getTime();
+    }
+
+    /**
+     * 检查curDate是否在时间段startDate和endDate内
+     *
+     * @param curDate
+     *            需要比较的时间
+     * @param startDate
+     *            时间段的开始时间
+     * @param endDate
+     *            时间段的结束时间
+     * @return
+     */
+    public static boolean isInDateRange(Date curDate, Date startDate, Date endDate) {
+        if (startDate == null || curDate == null) {
+            return false;
+        }
+
+        if (curDate.compareTo(startDate) >= 0) {
+            if (endDate == null) {
+                return true;
+            } else if (curDate.compareTo(endDate) <= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Date localDateToDate(LocalDate localDate) {
+
+        ZoneId zoneId = ZoneId.systemDefault();
+        ZonedDateTime zdt = localDate.atStartOfDay(zoneId);
+        Date date = Date.from(zdt.toInstant());
+
+        return date;
+    }
+
+    public static Date parseDate(String datestr) {
+        if (null == datestr || "".equals(datestr)) {
+            return null;
+        }
+        try {
+            String fmtstr = "";
+            if (datestr.indexOf('-') > 0) {
+                fmtstr = "yyyy-MM-dd";
+            } else if (datestr.indexOf('年') > 0) {
+                fmtstr = "yyyy年MM月dd日";
+            } else if (datestr.indexOf('/') > 0) {
+                fmtstr = "yyyy/MM/dd";
+            } else {
+                fmtstr = "yyyyMMdd";
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat(fmtstr);
+            return sdf.parse(datestr);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static Date setDateField(Date date, int field, int value) {
+        Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        c.set(field, value);
+        return c.getTime();
+    }
+}

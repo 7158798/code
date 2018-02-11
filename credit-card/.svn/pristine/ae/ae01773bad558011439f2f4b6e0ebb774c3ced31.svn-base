@@ -1,0 +1,62 @@
+package com.pay.aile.bill.job;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.aile.bill.entity.CreditFile;
+
+/**
+ *
+ * @ClassName: FileQueueRedisHandle
+ * @Description: 邮件附件的队列
+ * @author jinjing
+ * @date 2017年11月12日
+ *
+ */
+@Component
+public class FileQueueRedisHandle {
+
+    public static final String MAIL_FILE_LIST = "aile-mail-file-list";
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    /**
+     *
+     * @Title: bathPushFile
+     * @Description:；批量保存
+     * @param creditFileList
+     * @return void 返回类型 @throws
+     */
+    public void bathPushFile(List<CreditFile> creditFileList) {
+        List<String> values = new ArrayList<String>();
+        for (CreditFile file : creditFileList) {
+            values.add(JSONObject.toJSONString(file));
+        }
+        // 批量保存
+        redisTemplate.opsForList().rightPushAll(MAIL_FILE_LIST, values);
+
+    }
+
+    /**
+     *
+     * @Title: bathLeftPushFile
+     * @Description:；批量保存
+     * @param creditFileList
+     * @return void 返回类型 @throws
+     */
+    public void bathLeftPushFile(List<CreditFile> creditFileList) {
+        List<String> values = new ArrayList<String>();
+        for (CreditFile file : creditFileList) {
+            values.add(JSONObject.toJSONString(file));
+        }
+        // 批量保存
+        redisTemplate.opsForList().leftPushAll(MAIL_FILE_LIST, values);
+
+    }
+}

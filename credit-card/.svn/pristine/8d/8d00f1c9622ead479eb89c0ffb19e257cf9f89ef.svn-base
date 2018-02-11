@@ -1,0 +1,386 @@
+package com.pay.card.service.impl;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.pay.card.bean.CreditCardBean;
+import com.pay.card.dao.CreditBillDao;
+import com.pay.card.dao.CreditUserBillRelationDao;
+import com.pay.card.dao.StatisticsDao;
+import com.pay.card.model.CreditBill;
+import com.pay.card.service.CreditBillService;
+import com.pay.card.utils.DateUtil;
+
+@Service
+public class CreditBillServiceImpl implements CreditBillService {
+    @Autowired
+    private CreditBillDao creditBillDao;
+    @Autowired
+    private CreditUserBillRelationDao creditUserBillRelationDao;
+    @Autowired
+    private StatisticsDao statisticsDao;
+
+    @Override
+    public JSONArray findBillCalendar(CreditCardBean creditCard) {
+        // 获取信用卡
+        List<Map<String, Object>> cardList = statisticsDao.findCardList(creditCard);
+        // 10天前的账单
+        List<Map<String, Object>> billList = statisticsDao.findOldBillList(creditCard);
+        // // 今天10天之前的年
+        // int lastYear = LocalDate.now().plusDays(-10L).getYear();
+        // // 今天的年
+        // int notwYear = LocalDate.now().getYear();
+        // // 今天50天之后的年
+        // int nextYear = LocalDate.now().plusDays(50L).getYear();
+        // JSONArray array = new JSONArray();
+        // JSONObject yearJSON = null;
+        // if (lastYear != notwYear) {
+        // yearJSON = new JSONObject();
+        // yearJSON.put("year", lastYear);
+        // array.add(yearJSON);
+        // }
+        // yearJSON = new JSONObject();
+        // yearJSON.put("year", notwYear);
+        // array.add(yearJSON);
+        // if (notwYear != nextYear) {
+        // yearJSON = new JSONObject();
+        // yearJSON.put("year", nextYear);
+        // array.add(yearJSON);
+        // }
+        LocalDate maxDate = LocalDate.now().plusDays(50L);
+        List<JSONObject> resultList = new ArrayList<JSONObject>();
+        Map<Long, Map<String, Object>> cardMap = new HashMap<Long, Map<String, Object>>();
+
+        // 未来的账单
+        cardList.forEach(card -> {
+            Long cardId = (Long) card.get("id");
+            cardMap.put(cardId, card);
+            // 账单日
+            // int billDay = (Integer) card.get("billDay");
+            // 还款日
+            // int dueDay = (Integer) card.get("dueDay");
+            if (card.get("billDay") != null) {
+                getBillDeatil(resultList, maxDate, card, billList);
+
+            }
+            if (card.get("dueDate") != null) {
+                getDueDeatil(resultList, maxDate, card);
+            }
+        });
+        LocalDate today = LocalDate.now();
+        // 今天的时间
+        Date now = DateUtil.getCurrentDate0();
+        today = today.plusDays(-10);
+        // 历史账单
+        getOldBillDeatil(resultList, billList, cardMap, DateUtil.localDateToDate(today));
+        if (resultList == null || resultList.size() == 0) {
+            return new JSONArray();
+        }
+        // 排序
+        resultList.sort(
+                (JSONObject bill1, JSONObject bill2) -> bill1.getDate("date").before(bill2.getDate("date")) ? -1 : 1);
+        // 判断list中是否含有今天的对应的信息，如果增加null
+        boolean todayFlag = false;
+        for (int i = 0; i < resultList.size(); i++) {
+            JSONObject tempDate = resultList.get(i);
+
+            if (now.equals(tempDate.getDate("date"))) {
+                todayFlag = true;
+            }
+            if (now.before(tempDate.getDate("date"))) {
+                if (!todayFlag) {
+                    todayFlag = true;
+                    // 加入今天的空JSON
+                    JSONObject todayJson = new JSONObject();
+                    todayJson.put("date", now);
+                    resultList.add(i, todayJson);
+                }
+
+            }
+        }
+        // 构造结果集
+        Map<String, JSONObject> yearMap = new HashMap<String, JSONObject>();
+        Map<Date, JSONObject> dayMap = new HashMap<Date, JSONObject>();
+
+        JSONArray yearArray = new JSONArray();
+        resultList.forEach(bill -> {
+            Date date = bill.getDate("date");
+            // 状态
+
+            String billStatus = "now";
+            if (now.before(date)) {
+                billStatus = "later";
+            } else if (now.after(date)) {
+                billStatus = "past";
+            }
+
+            String yearStr = DateUtil.formatYYYY(date);
+
+            if (yearMap.containsKey(yearStr)) {
+                JSONObject yearJson = yearMap.get(yearStr);
+                if (dayMap.containsKey(date)) {
+                    JSONObject dayJson = dayMap.get(date);
+                    JSONArray billArray = dayJson.getJSONArray("itemData");
+                    // 增加账单的明细内容
+                    if (bill.getString("bankName") != null) {
+                        billArray.add(bill);
+                    }
+
+                    dayJson.put("itemData", billArray);
+
+                } else {
+
+                    // 天的array
+                    JSONArray dayArray = yearJson.getJSONArray("dayData");
+                    JSONObject dayJson = new JSONObject();
+                    dayJson.put("billStatus", billStatus);
+                    dayJson.put("date", DateUtil.formatMMDD3(date));
+                    dayJson.put("week", DateUtil.getWeekOfDate(date));
+                    // 账单数组
+                    JSONArray billArray = new JSONArray();
+
+                    billArray.add(bill);
+                    dayJson.put("itemData", billArray);
+
+                    dayArray.add(dayJson);
+
+                    yearJson.put("dayData", dayArray);
+
+                    dayMap.put(date, dayJson);
+
+                }
+            } else {
+                // 年的json
+                JSONObject yearJson = new JSONObject();
+                // 年
+                yearJson.put("yearsName", yearStr);
+                // 天的array
+                JSONArray dayArray = new JSONArray();
+                JSONObject dayJson = new JSONObject();
+                dayJson.put("billStatus", billStatus);
+                dayJson.put("date", DateUtil.formatMMDD3(date));
+                dayJson.put("week", DateUtil.getWeekOfDate(date));
+                // 账单数组
+                JSONArray billArray = new JSONArray();
+
+                if (bill.getString("bankName") != null) {
+                    billArray.add(bill);
+                }
+                dayJson.put("itemData", billArray);
+
+                dayArray.add(dayJson);
+
+                yearJson.put("dayData", dayArray);
+
+                dayMap.put(date, dayJson);
+                yearMap.put(yearStr, yearJson);
+
+                yearArray.add(yearJson);
+
+            }
+
+        });
+
+        return yearArray;
+    }
+
+    /**
+     * @Title: findCreditBillList
+     * @Description: 查询账单列表
+     * @param creditBill
+     * @return List<CreditBill> 返回类型 @throws
+     */
+    @Override
+    public List<CreditBill> findCreditBillList(CreditBill creditBill) {
+        Sort sort = new Sort(Direction.DESC, "id");
+        return creditBillDao.findAll(getSpecification(creditBill), sort);
+    }
+
+    public Specification<CreditBill> getSpecification(CreditBill creditBill) {
+        return new Specification<CreditBill>() {
+            @Override
+            public Predicate toPredicate(Root<CreditBill> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+
+                list.add(cb.equal(root.get("card").get("id").as(Long.class), creditBill.getCard().getId()));
+
+                list.add(cb.equal(root.get("userId").as(Long.class), creditBill.getUserId()));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+
+        };
+    }
+
+    /**
+     * @Title: saveOrUpdate
+     * @Description: 保存账单
+     * @param creditBill
+     * @return CreditBill 返回类型 @throws
+     */
+    @Override
+    public CreditBill saveOrUpdate(CreditBill creditBill) {
+        creditBill = creditBillDao.save(creditBill);
+        return creditBill;
+    }
+
+    @Override
+    public void updateBillStatusById(Long billId, Long userId) {
+        creditUserBillRelationDao.updateBillStatusById(billId, userId, new Date());
+    }
+
+    private void getBillDeatil(List<JSONObject> resultList, LocalDate maxDate, Map<String, Object> card,
+            List<Map<String, Object>> billList) {
+        String billDate = (String) card.get("billDay");
+        int year = LocalDate.now().getYear();
+        int month = LocalDate.now().getMonthValue();
+        int day = LocalDate.now().getDayOfMonth();
+        Long id = (Long) card.get("id");
+        LocalDate localBillDate = LocalDate.of(year, month, Integer.parseInt(billDate));
+        int i = 0;
+        // LocalDate localDueDate = DateUtil.dateToLocalDate(billDate);
+        // 过了账单日
+        if (day < Integer.parseInt(billDate)) {
+            i = 0;
+        } else if (day == Integer.parseInt(billDate)) {
+            // 在账单日判断账单是否已经获取到
+            for (Map<String, Object> bill : billList) {
+                Long cardId = (Long) bill.get("cardId");
+
+                if (cardId.longValue() == id.longValue()) {
+                    Date billDates = (Date) bill.get("billDate");
+                    LocalDate billLocalDate = DateUtil.dateToLocalDate(billDates);
+                    if (localBillDate == billLocalDate) {
+                        i = 1;
+                        continue;
+                    }
+
+                }
+
+            }
+        }
+
+        for (; i < 4; i++) {
+            LocalDate nextDue = localBillDate.plusMonths(i);
+            if (nextDue.isBefore(maxDate)) {
+                JSONObject dayDetail = new JSONObject();
+                // 名称
+                dayDetail.put("bankName", card.get("cardName"));
+                // 卡号
+                String numbers = (String) card.get("numbers");
+                numbers = numbers.length() > 4 ? numbers.substring(numbers.length() - 4, numbers.length()) : numbers;
+                dayDetail.put("bankNumber", numbers);
+                // 银行code
+                dayDetail.put("bankType", card.get("code"));
+                // 类型
+                dayDetail.put("billType", "账单日");
+                dayDetail.put("billNote", "");
+                // 时间
+                dayDetail.put("date", DateUtil.localDateToDate(nextDue));
+
+                resultList.add(dayDetail);
+            }
+        }
+    }
+
+    private void getDueDeatil(List<JSONObject> resultList, LocalDate maxDate, Map<String, Object> card) {
+        Date dueDate = (Date) card.get("dueDate");
+        LocalDate localDueDate = DateUtil.dateToLocalDate(dueDate);
+        for (int i = 1; i < 4; i++) {
+            LocalDate nextDue = localDueDate.plusMonths(1);
+            if (nextDue.isBefore(maxDate)) {
+                JSONObject dayDetail = new JSONObject();
+                // 名称
+                dayDetail.put("bankName", card.get("cardName"));
+                // 卡号
+                String numbers = (String) card.get("numbers");
+                numbers = numbers.length() > 4 ? numbers.substring(numbers.length() - 4, numbers.length()) : numbers;
+                dayDetail.put("bankNumber", numbers);
+                // 银行code
+                dayDetail.put("bankType", card.get("code"));
+                // 类型
+                dayDetail.put("billType", "还款日");
+                dayDetail.put("billNote", "");
+                // 时间
+                dayDetail.put("date", DateUtil.localDateToDate(nextDue));
+
+                resultList.add(dayDetail);
+            }
+        }
+    }
+
+    private void getOldBillDeatil(List<JSONObject> resultList, List<Map<String, Object>> billList,
+            Map<Long, Map<String, Object>> cardMap, Date minDate) {
+        billList.forEach(bill -> {
+            Map<String, Object> card = cardMap.get(bill.get("cardId"));
+            if (card != null) {
+                Date billDate = (Date) bill.get("billDate");
+                Date dueDate = (Date) bill.get("dueDate");
+                double repayment = ((BigDecimal) bill.get("repayment")).doubleValue();
+                double minimum = ((BigDecimal) bill.get("minimum")).doubleValue();
+                double credits = ((BigDecimal) bill.get("credits")).doubleValue();
+                double amount = ((BigDecimal) bill.get("amount")).doubleValue();
+                JSONObject dayBillDetail = new JSONObject();
+                JSONObject dayDueDetail = new JSONObject();
+                // 名称
+                dayBillDetail.put("bankName", card.get("cardName"));
+                dayDueDetail.put("bankName", card.get("cardName"));
+                // 卡号
+                String numbers = (String) card.get("numbers");
+                numbers = numbers.length() > 4 ? numbers.substring(numbers.length() - 4, numbers.length()) : numbers;
+                dayBillDetail.put("bankNumber", numbers);
+                dayDueDetail.put("bankNumber", numbers);
+                // 银行code
+                dayBillDetail.put("bankType", card.get("code"));
+                dayDueDetail.put("bankType", card.get("code"));
+                // 类型
+                dayBillDetail.put("billType", "账单日");
+                dayDueDetail.put("billType", "还款日");
+                dayBillDetail.put("billNote", "剩余额度" + (credits - amount + repayment));
+                if (repayment >= amount) {
+
+                    dayDueDetail.put("billNote", "已还清");
+                } else if (repayment >= minimum) {
+                    dayDueDetail.put("billNote", "需还款￥" + (amount - repayment) + "，已还最低");
+                } else {
+                    dayDueDetail.put("billNote", "需还款￥" + (amount - repayment));
+
+                }
+                // 时间
+                dayBillDetail.put("date", billDate);
+                dayDueDetail.put("date", dueDate);
+
+                // 添加到结果接种
+                if (minDate.before(billDate)) {
+                    resultList.add(dayBillDetail);
+
+                }
+                if (minDate.before(dueDate)) {
+                    resultList.add(dayDueDetail);
+
+                }
+            }
+
+        });
+
+    }
+
+}

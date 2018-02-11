@@ -1,0 +1,24 @@
+package com.pay.aile.bill.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.pay.aile.bill.entity.CreditUserFileRelation;
+import com.pay.aile.bill.mapper.CreditUserFileRelationMapper;
+import com.pay.aile.bill.service.CreditUserFileRelationService;
+
+@Service
+public class CreditUserFileRelationServiceImpl implements CreditUserFileRelationService {
+
+    @Autowired
+    private CreditUserFileRelationMapper creditUserFileRelationMapper;
+
+    @Override
+    public CreditUserFileRelation findCreditUserFileRelation(Long userId) {
+        if (userId != 0) {
+            return creditUserFileRelationMapper.selectById(userId);
+        }
+        return null;
+    }
+
+}

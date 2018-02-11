@@ -1,0 +1,31 @@
+/**
+ *
+ */
+package com.pay.card.api;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+
+import com.pay.card.utils.ApiHelper;
+import com.pay.card.view.JsonResultView;
+import com.pay.card.web.context.RedisRequestContext;
+import com.pay.commons.utils.lang.JsonUtils;
+
+/**
+ * @author qiaohui
+ * @param <T>
+ */
+@Controller
+public abstract class BaseController<T> {
+
+    protected final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
+
+    @Autowired
+    protected ApiHelper apiHelper;
+
+    public void redisCache(Object obj, String status) {
+        RedisRequestContext.setRequestContext("cacheValue", JsonUtils.toJsonString(new JsonResultView<>().setObject(obj)));
+        RedisRequestContext.setRequestContext("redisStatus", status);
+    }
+
+}

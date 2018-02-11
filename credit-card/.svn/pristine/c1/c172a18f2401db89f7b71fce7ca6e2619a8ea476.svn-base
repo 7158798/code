@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditFileMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditFile">
+		<id column="id" property="id" />
+		<result column="file_name" property="fileName" />
+		<result column="create_date" property="createDate" />
+		<result column="sent_date" property="sentDate" />
+        <result column="subject" property="subject" />
+        <result column="mail_type" property="mailType" />
+		<result column="email" property="email" />
+        <result column="status" property="status" />
+		<result column="process_result" property="processResult" />
+	</resultMap>
+    <resultMap id="UnAnalyzedResultMap" type="com.pay.aile.bill.model.CreditFileModel">
+        <id column="id" property="id" />
+		<result column="file_name" property="fileName" />
+		<result column="create_date" property="createDate" />
+		<result column="sent_date" property="sentDate" />
+        <result column="subject" property="subject" />
+        <result column="mail_type" property="mailType" />
+		<result column="email_id" property="emailId" />
+        <result column="status" property="status" />
+		<result column="process_result" property="processResult" />
+        <result column="email" property="email" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, filen_name AS filenName, create_date AS createDate, receive_date AS receiveDate, email AS email, process_result AS processResult
+    </sql>
+    <select id="selectUnAnalyzedList" resultMap="UnAnalyzedResultMap">
+        select 
+        a.id,
+        a.file_name,
+        a.create_date,
+        a.sent_date,
+        a.subject,
+        a.mail_type,
+        a.email,
+        a.status,
+        a.process_result,
+        b.id as email_id
+        from credit_file a 
+        join credit_email b on a.email = b.email
+        where a.process_result != 1
+    </select>
+    <select id="selectUnAnalyzedListByEmail" parameterType="string" resultMap="UnAnalyzedResultMap">
+        select 
+        a.id,
+        a.file_name,
+        a.create_date,
+        a.sent_date,
+        a.subject,
+        a.mail_type,
+        a.email,
+        a.status,
+        a.process_result,
+        b.email_id
+        from credit_file a 
+        join credit_email b on a.email = b.email
+        where a.process_result != 1 and a.email = #{value}
+    </select>
+    <update id="updateProcessResult">
+       update credit_file 
+       set process_result = #{result,jdbcType=TINYINT}
+       where id = #{id,jdbcType=BIGINT}
+    </update>
+    
+    <insert id="batchInsert" parameterType="java.util.List">
+        insert credit_file (file_name, subject, sent_date, mail_type, email,
+             process_result, status, update_date, create_date)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >  
+        (#{item.fileName},#{item.subject},#{item.sentDate},#{item.mailType},#{item.email},
+            #{item.processResult},#{item.status},#{item.updateDate},#{item.createDate})          
+         </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout" layout:decorator="layout">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>信用卡</title>
+  <link rel="stylesheet" href="/static/css/layui.css" th:href="@{/static/css/layui.css}"></link>
+</head>
+<body class="layui-layout-body">
+    <div layout:fragment="content" style="padding: 15px;">
+     <div style="float: right;">
+            
+            <a class="layui-btn layui-btn-normal layui-btn-radius" href="#" th:href="@{/templateForm}">新增</a>
+            
+          </div>
+    <form class="layui-form" action="">
+    <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label">銀行</label>
+          <div class="layui-input-inline">
+            <input type="tel" name="phone" lay-verify="phone" autocomplete="off" class="layui-input" />
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label"></label>
+          <div class="layui-input-inline">
+            <input type="text" name="email" lay-verify="email" autocomplete="off" class="layui-input" />
+          </div>
+        </div>
+   </div>
+    </form>
+     <table id="emailTable"  class="layui-table" lay-filter="parse-table-demo">
+      <thead>
+        <tr>
+          <th >信用额度</th>
+          <th >取现额度</th>
+          <th >本期应还款额</th>
+          <th >还款日</th>
+          <th >修改</th>
+        </tr> 
+      </thead>
+      <tbody >
+        <tr th:each="t:${billList}">
+          <td  th:text="${t.credits}">0</td>
+          <td  th:text="${t.cash}">0</td>
+          <td  th:text="${t.currentAmount}">0</td>
+          <td  th:text="${t.dueDate}">0</td>
+          
+          <td  ></td>
+        </tr>
+      
+      </tbody>
+    </table>
+    <script>
+    layui.use('table', function(){
+      var table = layui.table;
+    });
+     
+    
+    </script>
+    <script type="text/html" id="barDemo1">
+         <a class="layui-btn layui-btn-mini" lay-event="edit">工具性按钮</a>
+    </script>
+    
+    </div>
+</body>
+</html>

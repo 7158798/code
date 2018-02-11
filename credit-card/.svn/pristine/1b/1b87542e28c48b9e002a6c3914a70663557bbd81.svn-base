@@ -1,0 +1,77 @@
+package com.pay.aile.bill.utils;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+/**
+ *
+ * @author Charlie
+ * @description
+ */
+public class DateUtil {
+
+    /**
+     *
+     * @Description 根据账单的月份和当前程序执行的月份推导出账单的年
+     * @param month
+     * @return
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    public static String getBillYearByMonth(String month) {
+        int billMonth = Integer.valueOf(month);
+        Calendar c = Calendar.getInstance();
+        int nowMonth = c.get(Calendar.MONTH) + 1;
+        int year = c.get(Calendar.YEAR);
+        if (nowMonth < billMonth) {
+            year--;
+        }
+        return String.valueOf(year);
+    }
+
+    /**
+     *
+     * @Description 获取给定的日期的制定字段的值
+     * @param date
+     * @param field
+     * @return
+     * @see 需要参考的类或方法
+     * @author chao.wang
+     */
+    public static String getDateField(Date date, int field) {
+        Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        int value = c.get(field);
+        if (field == Calendar.MONTH) {
+            value++;
+        }
+        if (value < 10) {
+            return "0" + String.valueOf(value);
+        } else {
+            return String.valueOf(value);
+        }
+    }
+
+    public static Date parseDate(String datestr) {
+        if (null == datestr || "".equals(datestr)) {
+            return null;
+        }
+        try {
+            String fmtstr = null;
+            if (datestr.indexOf('-') > 0) {
+                fmtstr = "yyyy-MM-dd";
+            } else if (datestr.indexOf('年') > 0) {
+                fmtstr = "yyyy年MM月dd日";
+            } else if (datestr.indexOf('/') > 0) {
+                fmtstr = "yyyy/MM/dd";
+            } else {
+                fmtstr = "yyyyMMdd";
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat(fmtstr);
+            return sdf.parse(datestr);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}

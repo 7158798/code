@@ -1,0 +1,18 @@
+package com.pay.card.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pay.card.model.CreditCard;
+
+public interface CreditCardDao extends JpaRepository<CreditCard, Long>, JpaSpecificationExecutor<CreditCard> {
+
+    @Transactional
+    @Modifying
+    @Query("update CreditCard set name = ?1 where id = ?2")
+    public void updateCardNameById(String cardName, Long cardId);
+
+}

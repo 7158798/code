@@ -1,0 +1,51 @@
+package com.pay.card.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditUserEmailRelationDao;
+import com.pay.card.model.CreditUserEmailRelation;
+import com.pay.card.service.CreditUserEmailRelationService;
+
+@Service
+public class CreditUserEmailRelationServiceImpl implements CreditUserEmailRelationService {
+
+    @Autowired
+    private CreditUserEmailRelationDao creditUserEmailRelationDao;
+
+    @Override
+    public List<CreditUserEmailRelation> findCreditUserEmailRelation(CreditUserEmailRelation creditUserEmailRelation) {
+
+        return creditUserEmailRelationDao.findAll(getSpecification(creditUserEmailRelation));
+    }
+
+    private Specification<CreditUserEmailRelation> getSpecification(CreditUserEmailRelation creditUserEmailRelation) {
+        return new Specification<CreditUserEmailRelation>() {
+            @Override
+            public Predicate
+                            toPredicate(Root<CreditUserEmailRelation> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                List<Predicate> list = new ArrayList<Predicate>();
+
+                list.add(cb.equal(root.get("userId").as(Long.class), creditUserEmailRelation.getUserId()));
+                Predicate[] p = new Predicate[list.size()];
+                return cb.and(list.toArray(p));
+            }
+        };
+    }
+
+    @Override
+    public void saveCreditUserEmailRelation(CreditUserEmailRelation creditUserEmailRelation) {
+        creditUserEmailRelationDao.saveAndFlush(creditUserEmailRelation);
+
+    }
+
+}

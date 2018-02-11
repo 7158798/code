@@ -1,0 +1,39 @@
+environment=production
+server.port=8083
+
+spring.application.name=bill-analyze
+server.context-path=/bill-analyze
+
+primary.datasource.dsname=ds_mdb_credit_bill_rw
+
+mongodb.dataSourceName=mdb_credit
+mongodb.databaseName=creditcard
+
+#redis config
+
+redis.sentinel=1
+# REDIS (RedisProperties)
+# Redis\u6570\u636E\u5E93\u7D22\u5F15\uFF08\u9ED8\u8BA4\u4E3A0\uFF09
+
+spring.redis.Sentinel.nodes=
+spring.redis.password=
+spring.redis.Sentinel.master=
+spring.redis.database=2
+spring.redis.dbIndex=2
+spring.redis.pool.maxIdle=5
+spring.redis.pool.MaxWait=-1
+# Redis\u670D\u52A1\u5668\u5730\u5740
+spring.redis.hostName=10.10.110.35;10.10.110.45;10.10.110.49
+# Redis\u670D\u52A1\u5668\u8FDE\u63A5\u7AEF\u53E3
+spring.redis.port=26379
+# Redis\u670D\u52A1\u5668\u8FDE\u63A5\u5BC6\u7801\uFF08\u9ED8\u8BA4\u4E3A\u7A7A\uFF09
+spring.redis.timeout=0
+redis.host=${letou.redis.host}
+redis.password=${letou.redis.password}
+redis.masterName=${letou.redis.master}
+redis.dbIndex=2
+
+#Actuator
+endpoints.health.sensitive=false
+management.security.enabled=false
+7

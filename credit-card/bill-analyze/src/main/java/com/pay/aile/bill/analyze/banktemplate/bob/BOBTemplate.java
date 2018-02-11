@@ -1,0 +1,222 @@
+package com.pay.aile.bill.analyze.banktemplate.bob;
+
+import java.math.BigDecimal;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.pay.aile.bill.analyze.banktemplate.BaseBankTemplate;
+import com.pay.aile.bill.contant.Constant;
+import com.pay.aile.bill.entity.CreditBill;
+import com.pay.aile.bill.entity.CreditCard;
+import com.pay.aile.bill.entity.CreditTemplate;
+import com.pay.aile.bill.enums.CardTypeEnum;
+import com.pay.aile.bill.exception.AnalyzeBillException;
+import com.pay.aile.bill.model.AnalyzeParamsModel;
+import com.pay.aile.bill.utils.PatternMatcherUtil;
+
+/**
+ * @author Charlie
+ * @description 北京银行解析模板
+ */
+@Service
+public class BOBTemplate extends BaseBankTemplate implements AbstractBOBTemplate {
+    private static final Logger logger = LoggerFactory.getLogger(BOBTemplate.class);
+
+    //@Value("${http.use.proxy}")
+    private boolean useProxy;
+
+    @Override
+    public void initRules() {
+        super.initRules();
+        if (rules == null) {
+            rules = new CreditTemplate();
+            rules.setCardtypeId(3L);
+            rules.setCardholder("尊敬的 [\\u4e00-\\u9fa5]+|尊敬的[\\u4e00-\\u9fa5]+");
+            rules.setDueDate("最 后 还 款 日：\\d{4}-\\d{2}-\\d{2}|最后还款日： \\d{4}-\\d{2}-\\d{2}");
+            rules.setBillDay("账单日：\\d{4}-\\d{2}-\\d{2}|账单日： \\d{4}-\\d{2}-\\d{2}");
+            rules.setYearMonth("账单日：\\d{4}-\\d{2}-\\d{2}|账单日： \\d{4}-\\d{2}-\\d{2}");
+            rules.setCurrentAmount("本期应还款金额：\\d+\\.?\\d*|本期应还款金额： \\d+\\.?\\d*");
+            rules.setMinimum("本期最低还款金额：\\d+\\.?\\d*|本期最低还款金额： \\d+\\.?\\d*");
+            rules.setCardNumbers("信用卡号\\d+");
+        }
+    }
+
+    private String getHtml(String cardUrl) {
+        logger.debug("BOB============useProxy={}", useProxy);
+        String html = "";
+        HttpClient httpClient = new HttpClient();
+        if (useProxy) {
+            httpClient.getHostConfiguration().setProxy("172.20.6.88", 3128);
+        }
+        httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(10000);// connection
+                                                                                      // timeout
+        httpClient.getHttpConnectionManager().getParams().setSoTimeout(10000);// sokect
+                                                                              // timeout
+        GetMethod getMethod = new GetMethod(cardUrl);
+        try {
+            int statusCode = httpClient.executeMethod(getMethod);
+            if (statusCode != HttpStatus.SC_OK) {
+                logger.error("Method failed: " + getMethod.getStatusLine());
+            }
+            // 读取内容
+            byte[] responseBody = getMethod.getResponseBody();
+            // 处理内容
+            html = new String(responseBody);
+        } catch (Exception e) {
+            logger.error("北京银行账单详细页无法访问:{}", e);
+        } finally {
+            getMethod.releaseConnection();
+        }
+        return html;
+    }
+
+    private String parseHtml(String html) {
+        String cardUrl = "";
+        html = html.replaceAll("&nbsp;", ""); // remove &nbsp;
+        Elements links = Jsoup.parse(html).select("a");
+        for (Iterator<Element> it = links.iterator(); it.hasNext();) {
+            Element e = it.next();
+            cardUrl = e.attr("href");
+            if (StringUtils.hasText(cardUrl)
+                    && cardUrl.startsWith("https://card.bankofbeijing.com.cn/cloudstmt/loginController/toLogin.htm")) {
+                cardUrl = e.attr("href");
+            } else {
+                continue;
+            }
+            try {
+                String cardNo = "";
+                String cardHtml = getHtml(cardUrl);
+                if (StringUtils.hasText(cardHtml)) {
+                    Document documentCard = Jsoup.parse(cardHtml);
+                    // Document documentCard = Jsoup.connect(cardUrl).get();
+                    Element elementCard = documentCard.getElementById("cardNum");
+                    cardNo = elementCard.attr("value");
+                }
+
+                Document document = Jsoup.parse(html);
+                Elements elements = document.getElementsByTag("td");
+
+                for (int j = 0; j < elements.size(); j++) {
+                    Element element = elements.get(j);
+                    // td需要特殊处理
+
+                    Elements childElements = element.getElementsByTag("td");
+
+                    if (childElements != null && childElements.size() > 1) {
+                        continue;
+                    }
+                    String text = element.text();
+                    text = text.replaceAll("\\s+", "");
+                    element.text(text);
+                }
+
+                html = document.toString();
+                html = html.replaceAll("(?is)<!DOCTYPE.*?>", ""); // remove html
+                                                                  // top
+                                                                  // infomation
+                html = html.replaceAll("(?is)<!--.*?-->", ""); // remove html
+                                                               // comment
+                html = html.replaceAll("(?is)<script.*?>.*?</script>", ""); // remove
+                                                                            // javascript
+                html = html.replaceAll("(?is)<style.*?>.*?</style>", ""); // remove
+                                                                          // css
+                html = html.replaceAll("(?is)<.*?>", "");
+
+                html = html.replaceAll("\n", "");// remove \n
+                html = html.replaceAll("$", "");// 去掉美元符号
+                html = html.replaceAll("＄", "");
+                html = html.replaceAll("￥", "");// 去掉人民币符号
+                html = html.replace(",", "");// 去掉金额分隔符
+                html = html.replaceAll(" {2,}", " ");// 去掉多余空格，只留一个
+                html = html + "信用卡号" + cardNo;
+
+                return html;
+            } catch (Exception e1) {
+                logger.error("北京银行抓取网页正文异常:{}", e);
+            }
+        }
+        return html;
+
+    }
+
+    @Override
+    protected void analyzeCurrentAmount(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getCurrentAmount())) {
+            List<String> currentAmountList = getValueListByPattern("currentAmount", content, rules.getCurrentAmount(),
+                    "：");
+            currentAmountList = PatternMatcherUtil.getMatcher(Constant.pattern_amount, currentAmountList);
+            if (!currentAmountList.isEmpty()) {
+                currentAmountList.stream().map(item -> {
+                    if (item.startsWith("-")) {
+                        return item.replaceAll("-", "");
+                    } else {
+                        return item;
+                    }
+                }).forEach(currentAmount -> {
+                    CreditBill bill = new CreditBill();
+                    bill.setCurrentAmount(new BigDecimal(currentAmount));
+                    billList.add(bill);
+                });
+            }
+        }
+    }
+
+    @Override
+    protected void analyzeYearMonth(List<CreditBill> billList, String content, AnalyzeParamsModel apm) {
+        if (StringUtils.hasText(rules.getYearMonth())) {
+            String yearMonth = getValueByPattern("yearMonth", content, rules.getYearMonth(), apm, " ");
+            yearMonth = StringUtils.collectionToDelimitedString(PatternMatcherUtil.getMatcher("\\d+", yearMonth), "");
+            if (StringUtils.hasText(yearMonth)) {
+                String year = yearMonth.substring(0, 4);
+                String month = yearMonth.substring(4, 6);
+                billList.forEach(bill -> {
+                    bill.setYear(year);
+                    bill.setMonth(month);
+                });
+            }
+        }
+    }
+
+    @Override
+    protected void checkCardAndBill(AnalyzeParamsModel apm) throws AnalyzeBillException {
+        if (apm.getResult().getCardList().isEmpty()) {
+            throw new AnalyzeBillException("未找到信用卡");
+        }
+        // 检查是否包含卡号和持卡人
+        for (CreditCard card : apm.getResult().getCardList()) {
+            if (!StringUtils.hasText(card.getNumbers())) {
+                throw new AnalyzeBillException("无法获取卡号");
+            }
+        }
+        for (CreditCard card : apm.getResult().getCardList()) {
+            if (!StringUtils.hasText(card.getBillDay())) {
+                throw new AnalyzeBillException("老版北京银行账单无法解析");
+            }
+        }
+
+    }
+
+    @Override
+    protected void extractBillContent(AnalyzeParamsModel apm) {
+        apm.setContent(parseHtml(apm.getOriginContent()));
+    }
+
+    @Override
+    protected void setCardType() {
+        cardType = CardTypeEnum.BOB_DEFAULT;
+    }
+
+}

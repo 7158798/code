@@ -1,0 +1,14 @@
+package com.pay.card.service;
+
+import java.util.List;
+
+import com.pay.card.model.CreditRepayment;
+
+public interface CreditRepaymentService {
+    public CreditRepayment delete(CreditRepayment creditRepayment);
+
+    public List<CreditRepayment> findRepaymentList(CreditRepayment creditRepayment);
+
+    public CreditRepayment saveOrUpdate(CreditRepayment creditRepayment);
+
+}

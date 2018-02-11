@@ -1,0 +1,291 @@
+
+/**
+* @Title: PushCardMessage.java
+* @Package com.pay.card.push
+* @Description: TODO(用一句话描述该文件做什么)
+* @author jing.jin
+* @date 2017年12月8日
+* @version V1.0
+*/
+
+package com.pay.card.push;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.astrotrain.client.ATProducer;
+import com.pay.astrotrain.client.exceptions.ATException;
+import com.pay.astrotrain.client.message.StringMessage;
+import com.pay.astrotrain.client.producer.DefaultATProducer;
+import com.pay.card.dao.StatisticsDao;
+
+/**
+ * @ClassName: PushCardMessage
+ * @Description: TODO(这里用一句话描述这个类的作用)
+ * @author jing.jin
+ * @date 2017年12月8日
+ *
+ */
+@Component
+public class PushCardMessage {
+    static Logger logger = LoggerFactory.getLogger(PushCardMessage.class);
+    // 账单日
+    private static final String BILL_DAY_KEY = "billDayLock";
+    // 出账单
+    private static final String OUT_BILL_KEY = "outBillLock";
+    // 逾期
+    private static final String OVER_DUE_KEY = "overDueLock";
+    // 还款
+    private static final String REPAYMENT_KEY = "repaymentLock";
+
+    // 账单日
+    private static final String BILL_DAY_MAXID_KEY = "billDayMaxId";
+    // 出账单
+    private static final String OUT_BILL_MAXID_KEY = "outBillMaxId";
+    // 逾期
+    private static final String OVER_DUE_MAXID_KEY = "overDueMaxId";
+    // 还款
+    private static final String REPAYMENT_MAXID_KEY = "repaymentMaxId";
+
+    private static final String LOCK_KEY = "lock";
+    private static final String UN_LOCK_KEY = "unlock";
+    @Autowired
+    private StatisticsDao statisticsDao;
+    @Resource
+    private DefaultATProducer atProducer;
+
+    @Value("${astrotrain.topic}")
+    private String topic = "mc_YOUSHUA";
+
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+
+    // 1点的时候删除缓存
+    @Scheduled(cron = ("0 0 1 * * ?"))
+    public void cleanMaxId() {
+        redisTemplate.delete(BILL_DAY_MAXID_KEY);
+        redisTemplate.delete(OUT_BILL_MAXID_KEY);
+        redisTemplate.delete(OVER_DUE_MAXID_KEY);
+        redisTemplate.delete(REPAYMENT_MAXID_KEY);
+    }
+
+    /**
+     *
+     * @Title: send @Description: 发送消息
+     * @param message
+     * @param theme
+     * @return void 返回类型 @throws
+     */
+    // @Scheduled(cron = ("0 59 23 * * ?"))
+    // @Scheduled(cron = ("0 0/10 9-20 * * ?"))
+    public void send(String message, String theme) {
+        try {
+            ATProducer producer = atProducer.createProducer(topic);
+            logger.info("current theme is: {}", theme);
+            StringMessage tradeMsg = new StringMessage();
+            tradeMsg.setMsg(message);
+            producer.send(tradeMsg);
+        } catch (ATException e) {
+            logger.error("{}", e);
+        }
+    }
+
+    /**
+     *
+     * @Title: sendBillDayMessage
+     * @Description: 账单日消息
+     * @return void 返回类型 @throws
+     */
+    @Scheduled(cron = ("0/10 * 9-20 * * ?"))
+    public void sendBillDayMessage() {
+        boolean lock = false;
+        try {
+            cleanMaxId();
+
+            lock = redisTemplate.opsForValue().setIfAbsent(BILL_DAY_KEY, LOCK_KEY);
+            if (lock) {
+                // 如果在执行任务的过程中，程序突然挂了，为了避免程序因为中断而造成一直加锁的情况产生，20分钟后，key值失效，自动释放锁，
+                redisTemplate.expire(BILL_DAY_KEY, 8, TimeUnit.MINUTES);
+                String maxId = redisTemplate.opsForValue().get(BILL_DAY_MAXID_KEY);
+                Long maxCardId = statisticsDao.findMaxCardId();
+                if (maxCardId == null) {
+                    maxCardId = 0L;
+                }
+                redisTemplate.opsForValue().set(BILL_DAY_MAXID_KEY, String.valueOf(maxCardId));
+                List<Map<String, Object>> list = statisticsDao.findBillDayCard(maxId);
+
+                ATProducer producer = atProducer.createProducer(topic);
+
+                list.forEach(msg -> {
+
+                    Map<String, Object> map = new HashMap<String, Object>();
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    String sendTime = sdf.format(new Date());
+                    map.put("user_no", msg.get("customer"));
+                    map.put("app", "YOUSHUA");
+                    map.put("template_id", 16);//
+                    map.put("template_parms", "");
+                    map.put("plan_time", sendTime);
+                    map.put("center_show", 1);
+                    map.put("is_push", 1);
+                    JSONObject jsend = new JSONObject();
+                    jsend.put("type", "native"); // 原生模块跳转
+                    jsend.put("redirect", "XYKHK"); // 信用卡还款页
+                    jsend.put("keys", "nodata"); // 无跳转参数
+                    map.put("redirect_params", jsend.toString());
+                    StringMessage tradeMsg = new StringMessage();
+                    tradeMsg.setMsg(JSONObject.toJSONString(map));
+                    try {
+                        producer.send(tradeMsg);
+                    } catch (Exception e) {
+                        logger.error(e.getMessage());
+                    }
+                });
+
+            }
+
+        } catch (Exception e) {
+            logger.error("{}", e);
+        } finally {// 无论如何，最终都要释放锁
+            if (lock) {// 如果获取了锁，则释放锁
+                redisTemplate.delete(BILL_DAY_KEY);
+                System.out.println("任务结束，释放锁!");
+            } else {
+                System.out.println("没有获取到锁，无需释放锁!");
+            }
+        }
+    }
+
+    @Scheduled(cron = ("0 0/10 9-12 * * ?"))
+    public void sendOutBillMessage() {
+
+        boolean lock = false;
+        try {
+            lock = redisTemplate.opsForValue().setIfAbsent(OUT_BILL_KEY, LOCK_KEY);
+            if (lock) {
+                // 如果在执行任务的过程中，程序突然挂了，为了避免程序因为中断而造成一直加锁的情况产生，20分钟后，key值失效，自动释放锁，
+                redisTemplate.expire(OUT_BILL_KEY, 8, TimeUnit.MINUTES);
+                String maxId = redisTemplate.opsForValue().get(OUT_BILL_MAXID_KEY);
+                Long maxCardId = statisticsDao.findMaxBillId();
+                if (maxCardId == null) {
+                    maxCardId = 0L;
+                }
+                redisTemplate.opsForValue().set(OUT_BILL_MAXID_KEY, String.valueOf(maxCardId));
+
+                List<Map<String, Object>> list = statisticsDao.findOutBillCard(maxId);
+            }
+
+        } catch (Exception e) {
+            logger.error("{}", e);
+        } finally {// 无论如何，最终都要释放锁
+            if (lock) {// 如果获取了锁，则释放锁
+                redisTemplate.delete(OUT_BILL_KEY);
+                System.out.println("任务结束，释放锁!");
+            } else {
+                System.out.println("没有获取到锁，无需释放锁!");
+            }
+        }
+
+    }
+
+    @Scheduled(cron = ("0 0/10 9-12 * * ?"))
+    public void sendOverdueMessage() {
+
+        boolean lock = false;
+        try {
+            lock = redisTemplate.opsForValue().setIfAbsent(OVER_DUE_KEY, LOCK_KEY);
+            if (lock) {
+                // 如果在执行任务的过程中，程序突然挂了，为了避免程序因为中断而造成一直加锁的情况产生，20分钟后，key值失效，自动释放锁，
+                redisTemplate.expire(OVER_DUE_KEY, 8, TimeUnit.MINUTES);
+                String maxId = redisTemplate.opsForValue().get(OVER_DUE_MAXID_KEY);
+
+                Long maxBillId = statisticsDao.findMaxBillId();
+                if (maxBillId == null) {
+                    maxBillId = 0L;
+                }
+                redisTemplate.opsForValue().set(OVER_DUE_MAXID_KEY, String.valueOf(maxBillId));
+                List<Map<String, Object>> list = statisticsDao.findOverdueBillList(maxId);
+            }
+
+        } catch (Exception e) {
+            logger.error("{}", e);
+        } finally {// 无论如何，最终都要释放锁
+            if (lock) {// 如果获取了锁，则释放锁
+                redisTemplate.delete(OVER_DUE_KEY);
+                System.out.println("任务结束，释放锁!");
+            } else {
+                System.out.println("没有获取到锁，无需释放锁!");
+            }
+        }
+
+    }
+
+    @Scheduled(cron = ("0 0/10 9-17 * * ?"))
+    public void sendRepaymentMessage() {
+
+        boolean lock = false;
+        try {
+            lock = redisTemplate.opsForValue().setIfAbsent(REPAYMENT_KEY, LOCK_KEY);
+            if (lock) {
+                // 如果在执行任务的过程中，程序突然挂了，为了避免程序因为中断而造成一直加锁的情况产生，20分钟后，key值失效，自动释放锁，
+                redisTemplate.expire(REPAYMENT_KEY, 8, TimeUnit.MINUTES);
+                String maxId = redisTemplate.opsForValue().get(REPAYMENT_MAXID_KEY);
+
+                Long maxBillId = statisticsDao.findMaxBillId();
+                if (maxBillId == null) {
+                    maxBillId = 0L;
+                }
+                redisTemplate.opsForValue().set(REPAYMENT_MAXID_KEY, String.valueOf(maxBillId));
+                List<Map<String, Object>> list = statisticsDao.findRepaymentBillList(maxId);
+            }
+
+        } catch (Exception e) {
+            logger.error("{}", e);
+        } finally {// 无论如何，最终都要释放锁
+            if (lock) {// 如果获取了锁，则释放锁
+                redisTemplate.delete(REPAYMENT_KEY);
+                System.out.println("任务结束，释放锁!");
+            } else {
+                System.out.println("没有获取到锁，无需释放锁!");
+            }
+        }
+
+    }
+
+    private Map<String, Object> sendMessage(String customerNo, String cardNo) {
+        Map<String, Object> map = new HashMap<String, Object>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String sendTime = sdf.format(new Date());
+        map.put("user_no", customerNo);
+        map.put("app", "YOUSHUA");
+        map.put("template_id", 16);//
+        map.put("template_parms", cardNo);
+
+        // 推送时间
+        map.put("plan_time", sendTime);
+        map.put("center_show", 1);
+        map.put("is_push", 1);
+        JSONObject jsend = new JSONObject();
+        jsend.put("type", "native"); // 原生模块跳转
+        jsend.put("redirect", "XYKHK"); // 信用卡还款页
+        jsend.put("keys", "nodata"); // 无跳转参数
+        map.put("redirect_params", jsend.toString());
+
+        return map;
+    }
+}

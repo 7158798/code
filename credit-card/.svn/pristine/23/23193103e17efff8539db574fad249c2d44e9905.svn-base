@@ -1,0 +1,16 @@
+package com.pay.aile.bill.service;
+
+/**
+ *
+ * @Description:
+ * @see: CreditErrorLogService 此处填写需要参考的类
+ * @version 2017年11月30日 下午5:09:23
+ * @author chao.wang
+ */
+public interface CreditErrorLogService {
+    public void saveAnalyzeErrorLog(Long bankId, Long cardtypeId, Long billId, String email, Long userId, String msg);
+
+    public void saveErrorLog(String errorType, Long bankId, Long cardtypeId, Long billId, String email, Long userId,
+            String msg);
+
+}

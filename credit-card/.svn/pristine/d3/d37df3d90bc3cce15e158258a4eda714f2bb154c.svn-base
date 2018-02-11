@@ -1,0 +1,48 @@
+package com.pay.card.view;
+
+import com.pay.card.model.CreditBillDetail;
+import com.pay.card.utils.DateUtil;
+import com.pay.card.web.context.CardBuildContext;
+
+public class CreditBillDetailView {
+
+    private final CreditBillDetail billDetail;
+
+    private final CardBuildContext buildContext;
+
+    public CreditBillDetailView(CreditBillDetail creditBillDetail, CardBuildContext buildContext) {
+        billDetail = creditBillDetail;
+        this.buildContext = buildContext;
+    }
+
+    /**
+     * @Title: getTransactionAmount
+     * @Description: 账单金额
+     * @param
+     * @return
+     */
+    public String getTransactionAmount() {
+        return billDetail.getTransactionAmount();
+    }
+
+    /**
+     * @Title: getTransactionDate
+     * @Description: 交易日期
+     * @param
+     * @return
+     */
+    public String getTransactionDate() {
+        return DateUtil.formatMMDD2(billDetail.getTransactionDate());
+    }
+
+    /**
+     * @Title: getTransactionDescription
+     * @Description: 交易描述
+     * @param
+     * @return
+     */
+    public String getTransactionDescription() {
+        return billDetail.getTransactionDescription();
+    }
+
+}

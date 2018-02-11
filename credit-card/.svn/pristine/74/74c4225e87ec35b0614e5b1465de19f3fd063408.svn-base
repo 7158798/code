@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pay.aile.bill.mapper.CreditCardMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.pay.aile.bill.entity.CreditCard">
+        <id column="id" property="id" />
+        <result column="bank_id" property="bankId" />
+        <result column="bill_day" property="billDay" />
+        <result column="credits" property="credits" />
+        <result column="cash" property="cash" />
+        <result column="name" property="name" />
+        <result column="numbers" property="numbers" />
+        <result column="prepaid_cash_amount" property="prepaidCashAmount" />
+        <result column="cardholder" property="cardholder" />
+        <result column="integral" property="integral" />
+        <result column="email" property="email" />
+        <result column="bill_amount" property="billAmount" />
+        <result column="due_day" property="dueDay" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="minimum" property="minimum" />
+        <result column="status" property="status" />
+        
+	</resultMap>
+    <resultMap id="WithBankResultMap" type="com.pay.aile.bill.entity.CreditCard">
+        <id column="id" property="id" />
+        <result column="bank_id" property="bankId" />
+        <result column="bill_day" property="billDay" />
+        <result column="credits" property="credits" />
+        <result column="cash" property="cash" />
+        <result column="name" property="name" />
+        <result column="numbers" property="numbers" />
+        <result column="prepaid_cash_amount" property="prepaidCashAmount" />
+        <result column="cardholder" property="cardholder" />
+        <result column="integral" property="integral" />
+        <result column="email" property="email" />
+        <result column="bill_amount" property="billAmount" />
+        <result column="due_day" property="dueDay" />
+        <result column="create_date" property="createDate" />
+        <result column="update_date" property="updateDate" />
+        <result column="minimum" property="minimum" />
+        <result column="status" property="status" />
+        <result column="code" property="bankCode" />
+        <result column="short_name" property="bankShortName" />
+    </resultMap>
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, bank_id AS bankId, bill_day AS billDay, credits, cash, name , numbers, 
+        prepaid_cash_amount as prepaidCashAmount,cardholder,integral,email,
+        bill_amount as billAmount,due_day as dueDay,create_date as createDate,update_date as updateDate,
+        minimum,status
+    </sql>
+   <select id="findCardByBill" resultMap="WithBankResultMap">
+     select 
+        a.id, a.bank_id , a.bill_day , a.credits, a.cash, a.name , a.numbers, 
+        a.prepaid_cash_amount ,a.cardholder,a.integral,a.email,
+        a.bill_amount,a.due_day,a.create_date,a.update_date,
+        a.minimum,a.status,b.code,b.short_name
+     from credit_card a left join credit_bank b on a.bank_id = b.id
+     where a.id in  
+      <foreach item="item" index="index" collection="list" open="(" separator="," close=")">  
+     #{item}  
+    </foreach>  
+  </select>
+</mapper>

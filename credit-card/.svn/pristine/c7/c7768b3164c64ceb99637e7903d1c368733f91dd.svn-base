@@ -1,0 +1,31 @@
+package com.pay.card.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.pay.card.dao.CreditBillDao;
+import com.pay.card.dao.CreditRepaymentDao;
+import com.pay.card.model.CreditBill;
+import com.pay.card.model.CreditRepayment;
+import com.pay.card.service.CreditRepaymentService;
+
+@Service
+public class CreditRepaymentServiceImpl implements CreditRepaymentService {
+
+    @Autowired
+    private CreditRepaymentDao creditRepaymentDao;
+
+    @Autowired
+    private CreditBillDao creditBillDao;
+
+    @Override
+    public CreditRepayment saveOrUpdate(CreditRepayment creditRepayment) {
+        if (creditRepayment.getBill() != null && creditRepayment.getBill().getId() != null) {
+            CreditBill bill = creditBillDao.findOne(creditRepayment.getBill().getId());
+            creditRepayment.setBill(bill);
+            creditRepayment = creditRepaymentDao.saveAndFlush(creditRepayment);
+        }
+
+        return creditRepayment;
+    }
+}

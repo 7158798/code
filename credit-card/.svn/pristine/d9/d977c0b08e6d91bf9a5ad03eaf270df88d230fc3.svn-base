@@ -1,0 +1,164 @@
+package com.pay.card.web.interceptor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+
+import com.alibaba.fastjson.JSONObject;
+import com.pay.card.RedisDelConstants;
+import com.pay.card.enums.RedisStatusEnum;
+import com.pay.card.utils.JedisUtil;
+import com.pay.card.utils.LocalCacheUtil;
+import com.pay.card.utils.MethodInterceptorUtils;
+import com.pay.card.web.annotation.RedisCacheInterceptor;
+import com.pay.card.web.context.RedisRequestContext;
+import com.pay.commons.utils.lang.JsonUtils;
+
+public class RedisInterceptor extends HandlerInterceptorAdapter {
+
+    private static Logger logger = LoggerFactory.getLogger(RedisInterceptor.class);
+
+    private static final String QUERY = "query";
+
+    private static final String UPDATE = "update";
+    private static final int TIMEOUT = 10800;
+    private static final String REDIS_KEY = "credit_redis_key_";
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Override
+    public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object handler, Exception arg3)
+            throws Exception {
+        RedisCacheInterceptor redisCacheInterceptor = MethodInterceptorUtils.getAnnotaion(handler,
+                RedisCacheInterceptor.class);
+        // String key = req.getRequestURI() + req.getQueryString();
+        // key = REDIS_KEY + MD5Util.MD5Encode(key, "UTF-8");
+
+        String key = getKey(req);
+        logger.info("key:{}", key);
+        if (redisCacheInterceptor != null) {
+
+            String cacheValue = (String) req.getAttribute("cacheValue");
+            String redisStatus = (String) req.getAttribute("redisStatus");
+            String redisDelKey = (String) req.getAttribute("redisDelKey");
+
+            if (StringUtils.hasText(cacheValue) && RedisStatusEnum.QUERY.getCode().equals(redisStatus)) {
+                JSONObject jsonObject = JSONObject.parseObject(cacheValue);
+                if (req.getRequestURI().contains("findCardIndex")) {
+                    Map<String, List> map = JsonUtils.toObject(jsonObject.toString(), Map.class);
+                    if (CollectionUtils.isNotEmpty(map.get("cardList"))) {
+                        LocalCacheUtil.put(key, cacheValue, TIMEOUT);
+                        JedisUtil.saveString(key, cacheValue, TIMEOUT);
+                    }
+                } else if (req.getRequestURI().contains("findBillIndex")) {
+                    Map<String, List> map = JsonUtils.toObject(jsonObject.toString(), Map.class);
+                    if (CollectionUtils.isNotEmpty(map.get("billList"))) {
+                        LocalCacheUtil.put(key, cacheValue, TIMEOUT);
+                        JedisUtil.saveString(key, cacheValue, TIMEOUT);
+                    }
+                } else if (req.getRequestURI().contains("findbillDetail")) {
+                    LocalCacheUtil.put(key, cacheValue, TIMEOUT);
+                    JedisUtil.saveString(key, cacheValue, TIMEOUT);
+                } else {
+                    List list = JsonUtils.toObject(jsonObject.getString("object"), List.class);
+                    if (CollectionUtils.isNotEmpty(list)) {
+                        LocalCacheUtil.put(key, cacheValue, TIMEOUT);
+                        JedisUtil.saveString(key, cacheValue, TIMEOUT);
+                    }
+                }
+
+            } else if (RedisStatusEnum.UPDATE.getCode().equals(redisStatus)) {
+                // TODO
+                // LocalCacheUtil.remove(key);
+
+                String[] uri = req.getRequestURI().split("/");
+                String method = uri[uri.length - 1];
+                if ("saveCreditRepayment".equals(method)) {
+                    String[] delMethod = RedisDelConstants.saveCreditRepayment.split(",");
+                    for (int i = 0; i < delMethod.length; i++) {
+                        key = getDelKey(req, delMethod[i]);
+                        LocalCacheUtil.clear();
+                        Set<String> keys = JedisUtil.getKeys(REDIS_KEY + "*");
+                        JedisUtil.delete(keys);
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
+
+        RedisCacheInterceptor redisCacheInterceptor = MethodInterceptorUtils.getAnnotaion(handler,
+                RedisCacheInterceptor.class);
+        if (redisCacheInterceptor != null) {
+
+            String key = getKey(req);
+
+            // String key = req.getRequestURI() + req.getQueryString();
+            // key = REDIS_KEY + MD5Util.MD5Encode(key, "UTF-8");
+            String cacheValue = (String) LocalCacheUtil.get(key);
+            // String cacheValue = null;
+            if (StringUtils.hasText(cacheValue)) {
+                RedisRequestContext.setRequestContext("cacheValue", cacheValue);
+                return true;
+            } else {
+                cacheValue = JedisUtil.getString(key);
+                if (StringUtils.hasText(cacheValue)) {
+                    RedisRequestContext.setRequestContext("cacheValue", cacheValue);
+                    return true;
+                }
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    private String getDelKey(HttpServletRequest req, String method) {
+        String key = "";
+        String customerNo = req.getParameter("customerNo");
+        String channel = req.getParameter("channel");
+        String phoneNo = req.getParameter("phoneNo");
+        String cardId = req.getParameter("cardId");
+        String billId = req.getParameter("billId");
+        Long userId = (Long) LocalCacheUtil.get(phoneNo, customerNo, channel);
+
+        if ("findCardIndex".equals(method) || "findRecommendCardList".equals(method)) {
+            key = userId + "" + method;
+        } else if ("findbillDetail".equals(method)) {
+            key = userId + "" + billId + method;
+        }
+
+        return key;
+    }
+
+    private String getKey(HttpServletRequest req) {
+        String key = "";
+        String[] uri = req.getRequestURI().split("/");
+        String method = uri[uri.length - 1];
+        String customerNo = req.getParameter("customerNo");
+        String channel = req.getParameter("channel");
+        String phoneNo = req.getParameter("phoneNo");
+        String cardId = req.getParameter("cardId");
+        String billId = req.getParameter("billId");
+        Long userId = (Long) LocalCacheUtil.get(phoneNo, customerNo, channel);
+        if (StringUtils.hasText(billId)) {
+            key = userId + "" + billId + method;
+        } else if (StringUtils.hasText(cardId)) {
+            key = userId + "" + cardId + method;
+        } else {
+            key = userId + "" + method;
+        }
+        return key;
+    }
+
+}
